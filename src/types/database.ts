@@ -9,39 +9,43 @@
 
 export interface Order {
   id: string;
-  user_id: string | null; // NULL para guest checkout
+  user_id: string | null;
   customer_email: string;
   customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_nik?: string | null; // NIK Indonesia
   status: "pending" | "paid" | "shipped" | "delivered" | "cancelled";
   total_amount: number;
-  payment_order_id?: string; // ID do pedido Pagar.me (ou referência de outro gateway)
-  created_at: string;
-  updated_at: string;
-  // Fiscal e entrega (preenchidos no checkout e no webhook Pagar.me)
-  customer_cpf?: string | null;
-  customer_phone?: string | null;
-  shipping_cep?: string | null;
+  shipping_amount: number;
+  discount_amount: number;
+  coupon_code?: string | null;
+  payment_method?: string | null;
+  payment_gateway_id?: string | null; // Midtrans Order ID
+  shipping_zip?: string | null; // Kode Pos
   shipping_street?: string | null;
   shipping_number?: string | null;
   shipping_complement?: string | null;
   shipping_neighborhood?: string | null;
   shipping_city?: string | null;
   shipping_state?: string | null;
-  // Rastreio (preenchidos pelo webhook do Bling quando o pedido é despachado)
   tracking_code?: string | null;
   tracking_url?: string | null;
   tracking_carrier?: string | null;
   shipped_at?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface OrderItem {
   id: string;
   order_id: string;
-  product_id: string;
+  product_id: string | null;
+  kit_id: string | null;
   product_name: string;
   quantity: number;
   price: number;
   product_image?: string | null;
+  selected_color?: string | null; // Varian warna yang dipilih
   created_at: string;
 }
 
@@ -56,7 +60,6 @@ export interface Profile {
   avatar_url?: string;
   email?: string;
   username?: string;
-  website?: string;
   address_street?: string;
   address_city?: string;
   address_postcode?: string;
@@ -65,42 +68,23 @@ export interface Profile {
   updated_at?: string;
 }
 
-export interface VipList {
+export interface LoyaltyPoints {
   id: string;
-  user_id?: string;
-  email: string;
-  full_name?: string;
-  phone?: string;
+  user_id: string;
+  points: number;
+  tier: "Bronze" | "Silver" | "Gold" | "Platinum";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LoyaltyHistory {
+  id: string;
+  user_id: string;
+  points_change: number;
+  reason: string;
+  reference_id?: string | null;
   created_at: string;
 }
-
-/**
- * Tipos para Checkout (Guest ou User)
- */
-export interface CheckoutData {
-  items: Array<{
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
-    image?: string;
-  }>;
-  userId: string | null; // null para guest checkout
-  customerEmail: string | null; // null para guest, será coletado no checkout
-}
-
-/**
- * Metadata de checkout (Pagar.me / guest ou user)
- */
-export interface CheckoutMetadata {
-  userId: string | "null";
-  customerEmail: string | "null";
-  isGuest: "true" | "false";
-}
-
-// ============================================================================
-// SISTEMA DE GESTÃO DE ESTOQUE
-// ============================================================================
 
 /**
  * Produto no Banco de Dados
@@ -116,40 +100,56 @@ export interface ProductDB {
   category: string;
   collection: string | null;
   image_url: string | null;
-  badge: "bestseller" | "novo" | "vegano" | null;
-  anvisa_record: string | null;
+  badge: "bestseller" | "novo" | "vegano" | "kit" | "new" | null;
+  units_sold: number; // Social proof
   rating: number | null;
-  reviews: number;
+  reviews_count: number;
   is_active: boolean;
   color_variants: any[] | null;
   additional_images: string[] | null;
-  accordion_items: any[] | null;
   key_highlights: any[] | null;
+  size_guide?: string | null;
+  care_instructions?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Kit {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  old_price: number | null;
+  image_url: string | null;
+  badge: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KitItem {
+  id: string;
+  kit_id: string;
+  product_id: string;
+  quantity: number;
+  created_at: string;
 }
 
 export interface ProductWithInventory extends ProductDB {
   inventory?: Inventory[];
 }
 
-/**
- * Inventário (Estoque)
- */
 export interface Inventory {
   id: string;
   product_id: string;
-  stock_quantity: number; // Estoque total
-  reserved_quantity: number; // Estoque reservado (checkout em andamento)
-  low_stock_threshold: number; // Alerta de estoque baixo
-  reorder_point: number; // Ponto de reposição
+  stock_quantity: number;
+  reserved_quantity: number;
+  low_stock_threshold: number;
+  reorder_point: number;
   created_at: string;
   updated_at: string;
 }
 
-/**
- * Reserva de Estoque (durante checkout)
- */
 export interface InventoryReservation {
   id: string;
   product_id: string;
@@ -163,95 +163,33 @@ export interface InventoryReservation {
   user_id: string | null;
 }
 
-/**
- * Movimento de Estoque (Auditoria)
- */
-export interface InventoryMovement {
-  id: string;
-  product_id: string;
-  movement_type:
-    | "sale"
-    | "reservation"
-    | "reservation_release"
-    | "restock"
-    | "adjustment"
-    | "return";
-  quantity_change: number;
-  quantity_before: number;
-  quantity_after: number;
-  reference_id: string | null;
-  reason: string | null;
-  created_by: string | null;
-  created_at: string;
-}
-
-/**
- * Status do Estoque (View)
- */
-export interface InventoryStatus {
-  product_id: string;
-  product_name: string;
-  price: number;
-  is_active: boolean;
-  stock_quantity: number;
-  reserved_quantity: number;
-  available_quantity: number; // stock_quantity - reserved_quantity
-  low_stock_threshold: number;
-  reorder_point: number;
-  stock_status: "in_stock" | "low_stock" | "out_of_stock";
-  inventory_updated_at: string;
-}
-
-/**
- * Resposta da função reserve_inventory
- */
-export interface ReserveInventoryResponse {
-  success: boolean;
-  error?: string;
-  available?: number;
-  requested?: number;
-  reservation_id?: string;
-  expires_at?: string;
-}
-
-/**
- * Resposta da função confirm_reservation
- */
-export interface ConfirmReservationResponse {
-  success: boolean;
-  error?: string;
-  product_id?: string;
-  quantity_sold?: number;
-}
-
-/**
- * Resposta da função release_reservation
- */
-export interface ReleaseReservationResponse {
-  success: boolean;
-  error?: string;
-  product_id?: string;
-  quantity_released?: number;
-}
-
-/**
- * Avaliação de produto (tabela reviews)
- */
 export interface Review {
   id: string;
   product_id: string;
   rating: number;
   text: string;
   author_name: string;
-  author_email: string;
   status: "pending" | "approved" | "rejected";
+  image_url?: string | null;
   user_id: string | null;
   created_at: string;
 }
 
-// ============================================================================
-// CMS SYSTEM TYPES
-// ============================================================================
+export interface Waitlist {
+  id: string;
+  product_id: string;
+  user_id: string | null;
+  email: string;
+  notified_at: string | null;
+  created_at: string;
+}
+
+export interface Wishlist {
+  id: string;
+  user_id: string;
+  product_id: string;
+  created_at: string;
+}
 
 export interface CMSBlock {
   id: string;
@@ -263,11 +201,8 @@ export interface CMSPage {
   id: string;
   slug: string;
   title: string;
-  seo_title: string | null;
-  seo_description: string | null;
   blocks: CMSBlock[];
   is_published: boolean;
-  updated_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -276,10 +211,7 @@ export interface CMSPageVersion {
   id: string;
   page_id: string;
   title: string;
-  seo_title: string | null;
-  seo_description: string | null;
   blocks: CMSBlock[];
-  is_published: boolean;
   edited_by: string | null;
   created_at: string;
 }

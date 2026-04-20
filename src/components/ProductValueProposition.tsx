@@ -4,7 +4,6 @@ import { Product } from "@/constants/products";
 
 /**
  * Product value highlight — replicates shortDescription.
- * Regulatory/ANVISA registration is already displayed in ProductTrustSeals.
  */
 export default function ProductValueProposition({ product }: { product: Product }) {
   const text = product.shortDescription;

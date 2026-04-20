@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Shield, Lock, CreditCard, BadgeCheck, RotateCcw } from "lucide-react";
 
 interface SecurityBadgesProps {
-  /** Layout: horizontal (footer), compact (checkout) or checkout-full (with ANVISA and guarantee) */
+  /** Layout: horizontal (footer), compact (checkout) or checkout-full (with guarantee) */
   variant?: "horizontal" | "compact" | "checkout-full";
   /** Theme: dark (footer) or light (checkout) */
   theme?: "dark" | "light";
