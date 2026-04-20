@@ -1,0 +1,559 @@
+@import "tailwindcss";
+
+@theme {
+  /* benangbaju — Palet warna fashion feminin premium */
+  --color-brand-green: #8B6F5E;      /* Suede coklat hangat — warna utama brand */
+  --color-brand-offwhite: #FAF8F5;   /* Ivory putih susu — background elegan */
+  --color-brand-softblack: #1C1C1C;  /* Charcoal lembut — teks utama */
+  --color-brand-gold: #C9A47E;       /* Gold champagne — aksen premium */
+  --color-brand-champagne: #F0E6DA;  /* Blush nude — background sekunder */
+
+  /* Variabel sistem */
+  --color-background: var(--color-brand-offwhite);
+  --color-foreground: var(--color-brand-softblack);
+}
+
+:root {
+  --background: #FAF8F5;
+  --foreground: #1C1C1C;
+}
+
+/* Pertahankan tema terang untuk identitas brand benangbaju */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #FAF8F5;
+    --foreground: #1C1C1C;
+  }
+}
+
+html {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* Skip link */
+.skip-link {
+  position: fixed;
+  top: -9999px;
+  left: 1rem;
+  z-index: 99999;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-brand-green);
+  color: var(--color-brand-offwhite);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 1rem;
+  outline: 2px solid var(--color-brand-gold);
+  outline-offset: 2px;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Shared page rhythm */
+.page-shell {
+  min-height: 100vh;
+  padding-top: 6rem;
+  padding-bottom: 5rem;
+}
+
+@media (min-width: 768px) {
+  .page-shell {
+    padding-top: 8rem;
+    padding-bottom: 6rem;
+  }
+}
+
+/* Shared surface style */
+.surface-card {
+  background: #ffffff;
+  border: 1px solid rgb(28 28 28 / 0.08);
+  border-radius: 0.125rem;
+  box-shadow: 0 2px 24px rgb(28 28 28 / 0.04);
+}
+
+/* ============================================================================
+   PREMIUM UTILITY CLASSES — benangbaju design system
+   ============================================================================ */
+
+/* Glass card — glassmorphism halus */
+.glass-card {
+  background: rgba(250, 248, 245, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(201, 164, 126, 0.18);
+  box-shadow: 0 8px 32px rgba(28, 28, 28, 0.08), 0 2px 8px rgba(201, 164, 126, 0.06);
+}
+
+/* Glass card dark */
+.glass-card-dark {
+  background: rgba(28, 28, 28, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Gradient text gold */
+.gradient-text-gold {
+  background: linear-gradient(135deg, #C9A47E 0%, #E8C99A 40%, #C9A47E 70%, #A8834E 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Border glow gold */
+.border-glow-gold {
+  box-shadow: 0 0 0 1px rgba(201, 164, 126, 0.3), 0 0 20px rgba(201, 164, 126, 0.1);
+  transition: box-shadow 0.4s ease;
+}
+
+.border-glow-gold:hover {
+  box-shadow: 0 0 0 1px rgba(201, 164, 126, 0.6), 0 0 30px rgba(201, 164, 126, 0.2);
+}
+
+/* Divider ornamental */
+.divider-ornament {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.divider-ornament::before,
+.divider-ornament::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(201, 164, 126, 0.4), transparent);
+}
+
+/* ============================================================================
+   CURSOR — Desktop only
+   ============================================================================ */
+
+@media (min-width: 1024px) {
+  html,
+  body,
+  a,
+  button,
+  select,
+  textarea {
+    cursor: none !important;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"] {
+    cursor: text !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  html,
+  body,
+  a,
+  button,
+  input,
+  select,
+  textarea {
+    cursor: auto !important;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+}
+
+/* Otimização LCP */
+section[class*="h-screen"] {
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Scrollbar hide */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================================================
+   ACESSIBILIDADE — Foco visível (WCAG 2.4.7)
+   ============================================================================ */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-green);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--color-brand-green);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-brand-green);
+  outline-offset: 0;
+}
+
+/* ============================================================================
+   benangbaju — Visual Polish
+   ============================================================================ */
+
+/* Custom scrollbar — 3px halus dengan gradient */
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-brand-offwhite);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--color-brand-gold), var(--color-brand-green));
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-green);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-brand-champagne);
+  color: var(--color-brand-softblack);
+}
+
+/* Smooth image */
+img {
+  transition: opacity 0.3s ease;
+}
+
+/* Heading refinement */
+h1, h2, h3 {
+  letter-spacing: -0.015em;
+}
+
+h4, h5, h6 {
+  letter-spacing: 0.01em;
+}
+
+/* Nav link animated underline */
+.nav-link-animated {
+  position: relative;
+}
+
+.nav-link-animated::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: linear-gradient(to right, var(--color-brand-gold), currentColor);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-link-animated:hover::after {
+  width: 100%;
+}
+
+/* ============================================================================
+   PREMIUM ANIMATIONS — benangbaju visual identity
+   ============================================================================ */
+
+/* Fade in up */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+/* Shimmer skeleton */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-brand-champagne) 25%,
+    var(--color-brand-offwhite) 50%,
+    var(--color-brand-champagne) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Float — elemen melayang halus */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Border pulse */
+@keyframes borderPulse {
+  0%, 100% { border-color: rgba(201, 164, 126, 0.3); }
+  50% { border-color: rgba(201, 164, 126, 0.7); }
+}
+
+.animate-border-pulse {
+  animation: borderPulse 2.5s ease-in-out infinite;
+}
+
+/* Slide in from left */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Gradient shift */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease infinite;
+}
+
+/* Text shimmer */
+@keyframes textShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-text-shimmer {
+  background: linear-gradient(90deg, #C9A47E 0%, #E8C99A 25%, #C9A47E 50%, #A8834E 75%, #C9A47E 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: textShimmer 3s linear infinite;
+}
+
+/* Glimmer sweep on hover */
+@keyframes glimmer {
+  0%   { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(200%) skewX(-12deg); }
+}
+
+.glimmer-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.glimmer-hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+  transform: translateX(-100%) skewX(-12deg);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.glimmer-hover:hover::after {
+  opacity: 1;
+  animation: glimmer 0.7s ease forwards;
+}
+
+/* Floating pulse ring */
+@keyframes pulseRing {
+  0%   { transform: scale(0.95); opacity: 0.5; }
+  70%  { transform: scale(1.05); opacity: 0.2; }
+  100% { transform: scale(0.95); opacity: 0.5; }
+}
+
+.pulse-ring {
+  animation: pulseRing 3s ease-in-out infinite;
+}
+
+/* Cinematic text clip */
+.text-clip {
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Premium border gradient */
+.border-gradient-gold {
+  border: 1px solid transparent;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, var(--color-brand-gold), transparent, var(--color-brand-gold)) border-box;
+}
+
+/* Smooth entrance */
+@keyframes entranceUp {
+  from { opacity: 0; transform: translateY(32px); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+}
+
+.entrance-up {
+  animation: entranceUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Scroll bounce indicator */
+@keyframes scrollBounce {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(6px); opacity: 1; }
+}
+
+.animate-scroll-bounce {
+  animation: scrollBounce 2s ease-in-out infinite;
+}
+
+/* Ping slow */
+@keyframes pingSlow {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+.animate-ping-slow {
+  animation: pingSlow 2.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* ── SHIMMER SKELETON ── */
+@keyframes shimmerSkeleton {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(201, 164, 126, 0.04) 0%,
+    rgba(201, 164, 126, 0.10) 50%,
+    rgba(201, 164, 126, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmerSkeleton 1.8s ease-in-out infinite;
+}
+
+/* ── FOCUS RING PREMIUM ── */
+.focus-ring {
+  outline: none;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-brand-gold);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ── PRODUCT PAGE VARIANT BUTTON ── */
+.variant-btn {
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+.variant-btn::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 2px;
+  border: 1.5px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.variant-btn.active::after {
+  border-color: var(--color-brand-softblack);
+}
+
+/* ── MAGAZINE-STYLE DROP CAP ── */
+.drop-cap::first-letter {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3.5em;
+  line-height: 0.8;
+  float: left;
+  margin-right: 0.05em;
+  margin-top: 0.08em;
+  color: var(--color-brand-green);
+}
+
+/* ── PRODUCT CARD HOVER SHINE ── */
+@keyframes cardShine {
+  0%   { opacity: 0; transform: translateX(-100%) rotate(45deg); }
+  20%  { opacity: 0.15; }
+  100% { opacity: 0; transform: translateX(300%) rotate(45deg); }
+}
+
+.card-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-shine::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.card-shine:hover::before {
+  animation: cardShine 0.8s ease forwards;
+}
+
+/* ── DIVIDER WITH ICON ── */
+.divider-icon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.divider-icon::before,
+.divider-icon::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(201,164,126,0.25));
+}
+
+.divider-icon::after {
+  background: linear-gradient(to left, transparent, rgba(201,164,126,0.25));
+}
+
