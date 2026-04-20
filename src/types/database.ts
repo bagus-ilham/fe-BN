@@ -41,7 +41,12 @@ export interface OrderItem {
   product_name: string;
   quantity: number;
   price: number;
+  product_image?: string | null;
   created_at: string;
+}
+
+export interface OrderWithItems extends Order {
+  order_items: OrderItem[];
 }
 
 export interface Profile {
@@ -122,6 +127,10 @@ export interface ProductDB {
   key_highlights: any[] | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProductWithInventory extends ProductDB {
+  inventory?: Inventory[];
 }
 
 /**

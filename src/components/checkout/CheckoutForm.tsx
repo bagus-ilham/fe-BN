@@ -10,32 +10,12 @@ import { formatPrice } from "@/utils/format";
 
 const CHECKOUT_ADDRESS_STORAGE_KEY = "benangbaju_checkout_address";
 
-export interface CheckoutFormData {
-  fullName: string;
-  nik: string;
-  phone: string;
-  address: import("@/utils/validation").AddressData;
-  email: string;
-}
-
-/** Payment summary to display in the form (e.g. installments) */
-export interface PaymentSummary {
-  installments: 2 | 3;
-  total: number;
-  installmentAmount: number;
-}
-
-/** Ringkasan pesanan: subtotal, ongkir, dan total */
-export interface OrderSummary {
-  subtotal: number;
-  shipping: number;
-  total: number;
-  freeShipping: boolean;
-  /** Discount in IDR (e.g. 5% transfer) */
-  discount?: number;
-}
-
-export type CheckoutFormStep = "details" | "shipping" | "payment";
+import { 
+  CheckoutFormData, 
+  PaymentSummary, 
+  OrderSummary, 
+  CheckoutStepId as CheckoutFormStep 
+} from "@/types/checkout";
 
 interface CheckoutFormProps {
   onSubmit: (data: CheckoutFormData) => void;

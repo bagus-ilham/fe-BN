@@ -8,30 +8,7 @@ import { formatPrice } from '@/utils/format';
 import { Check, ExternalLink, Package, Truck, XCircle } from 'lucide-react';
 import Skeleton from '@/components/ui/Skeleton';
 import { createBrowserClient } from '@supabase/ssr';
-
-interface OrderItem {
-  id: string;
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  price: number;
-  product_image: string | null;
-}
-
-interface Order {
-  id: string;
-  user_id: string | null;
-  customer_email: string;
-  customer_name?: string | null;
-  status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
-  total_amount: number;
-  payment_order_id: string | null;
-  created_at: string;
-  tracking_code?: string | null;
-  tracking_url?: string | null;
-  tracking_carrier?: string | null;
-  order_items: OrderItem[];
-}
+import { OrderWithItems } from '@/types/database';
 
 const statusConfig = {
   pending: { label: 'Menunggu Pembayaran', icon: Package, color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
@@ -42,7 +19,7 @@ const statusConfig = {
 };
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   
@@ -58,24 +35,29 @@ export default function OrdersPage() {
           total_amount: 588000,
           payment_order_id: 'mock-payment-1',
           created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
           tracking_code: 'BENANG123456789',
           tracking_carrier: 'J&T Express',
           order_items: [
             {
               id: 'item-1',
+              order_id: 'mock-order-1',
               product_id: 'prod_1',
               product_name: 'Dress Midi Batik Modern',
               quantity: 1,
               price: 389000,
-              product_image: '/images/products/batik-dress.png'
+              product_image: '/images/products/batik-dress.png',
+              created_at: new Date().toISOString()
             },
             {
               id: 'item-2',
+              order_id: 'mock-order-1',
               product_id: 'prod_4',
               product_name: 'Blouse Katun Combed',
               quantity: 1,
               price: 199000,
-              product_image: '/images/products/cotton-blouse.png'
+              product_image: '/images/products/cotton-blouse.png',
+              created_at: new Date().toISOString()
             }
           ]
         }
@@ -83,10 +65,12 @@ export default function OrdersPage() {
       setLoading(false);
     };
 
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      );
+    }
     fetchOrders();
   }, [router]);
 

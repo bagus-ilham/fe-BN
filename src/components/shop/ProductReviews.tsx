@@ -14,15 +14,7 @@ interface ProductReviewsProps {
   kitProductIds?: string[];
 }
 
-interface DbReview {
-  id: string;
-  product_id: string;
-  rating: number;
-  text: string;
-  author_name: string;
-  created_at: string;
-  image_url: string | null;
-}
+import { DbReview, ReviewDisplay } from "@/types/review";
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -43,14 +35,6 @@ function StarRating({ rating }: { rating: number }) {
       ))}
     </div>
   );
-}
-
-interface ReviewDisplay {
-  id: string;
-  text: string;
-  author: string;
-  rating: number;
-  imageUrl: string | null;
 }
 
 function ReviewImageModal({

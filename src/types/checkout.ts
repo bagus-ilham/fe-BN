@@ -23,9 +23,8 @@ export type CheckoutPaymentPayload = {
 
 /** Data formulir checkout (pengiriman + identitas) */
 export interface CheckoutFormData {
-  email: string;
   fullName: string;
-  nik: string; 
+  nik: string;
   phone: string;
   address: {
     zip: string;
@@ -36,7 +35,31 @@ export interface CheckoutFormData {
     city: string;
     state: string;
   };
+  email: string;
 }
+
+/** Payment summary to display in the form (e.g. installments) */
+export interface PaymentSummary {
+  installments: 2 | 3;
+  total: number;
+  installmentAmount: number;
+}
+
+/** Ringkasan pesanan: subtotal, ongkir, dan total */
+export interface OrderSummary {
+  subtotal: number;
+  shipping: number;
+  total: number;
+  freeShipping: boolean;
+  /** Discount in IDR (e.g. 5% transfer) */
+  discount?: number;
+}
+
+/** Steps for the checkout process */
+export type CheckoutStepId = "details" | "shipping" | "payment";
+
+/** View state for the checkout page */
+export type CheckoutView = "form" | "payment";
 
 /** Midtrans menangani cicilan melalui UI Snap miliknya */
 export type InstallmentOption = "1x" | "2x" | "3x";

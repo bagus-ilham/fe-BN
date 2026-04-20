@@ -57,6 +57,11 @@ const nextConfig: NextConfig = {
         hostname: 'thenblank.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
     ],
     // Permitir URLs que começam com / (relativas)
     unoptimized: false,

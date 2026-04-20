@@ -6,9 +6,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/hooks/useAuth";
-import CheckoutForm, {
-  type CheckoutFormData,
-} from "@/components/checkout/CheckoutForm";
+import CheckoutForm from "@/components/checkout/CheckoutForm";
 import CheckoutOrderSummary from "@/components/checkout/CheckoutOrderSummary";
 import CheckoutSteps from "@/components/checkout/CheckoutSteps";
 import CheckoutPaymentStep from "@/components/checkout/CheckoutPaymentStep";
@@ -20,14 +18,14 @@ import { fbTrackInitiateCheckout } from "@/lib/meta-pixel";
 import type { 
   PaymentMethod, 
   CheckoutPaymentPayload,
-  ShippingQuoteOption 
+  ShippingQuoteOption,
+  CheckoutView,
+  CheckoutStepId,
+  CheckoutFormData
 } from "@/types/checkout";
 
 const CHECKOUT_BG = "#F9F7F2";
 const CHECKOUT_INK = "#1B2B22";
-
-type CheckoutView = "form" | "payment";
-type CheckoutStepId = "details" | "shipping" | "payment";
 
 export default function CheckoutPage() {
   const router = useRouter();

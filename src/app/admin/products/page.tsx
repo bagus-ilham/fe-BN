@@ -8,18 +8,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import type { ProductDB } from "@/types/database";
+import type { ProductDB, ProductWithInventory } from "@/types/database";
 import { PRODUCTS } from "@/constants/products";
 
-type ProductRow = {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  image_url: string;
-  is_active: boolean;
-  inventory?: Array<{ stock_quantity: number }>;
-};
+// Using ProductDB from @/types/database
 
 const products = PRODUCTS.map((p) => ({
   id: p.id,
@@ -87,7 +79,7 @@ export default async function AdminProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {(products as unknown as ProductRow[])?.map((product) => {
+              {(products as unknown as ProductWithInventory[])?.map((product) => {
                 const stock = product.inventory?.[0]?.stock_quantity ?? 0;
                 
                 return (

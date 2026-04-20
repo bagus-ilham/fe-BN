@@ -5,16 +5,8 @@ import { motion, useInView, useReducedMotion } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
 import type { Product } from "@/constants/products";
 
-interface ReviewSummary {
-  product_id: string;
-  rating: number;
-  reviews: number;
-}
-
-interface InventoryItem {
-  product_id: string;
-  available_quantity: number;
-}
+import { ReviewSummary } from "@/types/review";
+import { InventoryStatus as InventoryItem } from "@/types/database";
 
 interface HomeProductsGridProps {
   products: Product[];

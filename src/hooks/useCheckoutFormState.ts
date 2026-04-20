@@ -14,13 +14,7 @@ import { fetchAddressByZIP } from "@/utils/zippost";
 
 const CHECKOUT_ADDRESS_STORAGE_KEY = "benangbaju_checkout_address";
 
-export interface CheckoutFormFields {
-  email: string;
-  fullName: string;
-  nik: string;
-  phone: string;
-  address: AddressData;
-}
+import { CheckoutFormData } from "@/types/checkout";
 
 export interface UseCheckoutFormStateOptions {
   initialEmail?: string;

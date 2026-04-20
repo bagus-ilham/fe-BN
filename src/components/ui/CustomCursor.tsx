@@ -21,7 +21,7 @@ export default function CustomCursor() {
 
   // Animasi spring yang cepat dan responsif
   // Disetel agar tetap luwes tanpa terasa terlalu "magnetik"
-  const springConfig = { damping: 30, stiffness: 600, mass: 0.25 };
+  const springConfig = { damping: 25, stiffness: 800, mass: 0.1 };
   const cursorX = useSpring(0, springConfig);
   const cursorY = useSpring(0, springConfig);
 
