@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getClientIp } from "@/utils/rate-limit";
-import { getSupabaseAdmin } from "@/utils/supabase";
+import { listApprovedReviewsByProduct } from "@/lib/review-service";
+import { API_ERROR_MESSAGES, REVIEWS_ERROR_MESSAGES } from "@/constants/api-messages";
 
 /**
  * GET /api/reviews?product_id=prod_1
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
   const rl = rateLimit(getClientIp(req), { limit: 60, windowMs: 60_000 });
   if (!rl.success) {
     return NextResponse.json(
-      { error: "Too many requests" },
+      { error: API_ERROR_MESSAGES.TOO_MANY_REQUESTS },
       {
         status: 429,
         headers: {
@@ -28,24 +29,15 @@ export async function GET(req: NextRequest) {
 
     if (!productId) {
       return NextResponse.json(
-        { error: "product_id is required" },
+        { error: REVIEWS_ERROR_MESSAGES.PRODUCT_ID_REQUIRED },
         { status: 400 }
       );
     }
 
-    const supabase = getSupabaseAdmin();
-
-    const { data, error } = await supabase
-      .from("reviews")
-      .select("id, product_id, rating, text, author_name, image_url, created_at")
-      .eq("product_id", productId)
-      .eq("status", "approved")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("[REVIEWS API] Error:", error);
+    const data = await listApprovedReviewsByProduct(productId);
+    if (data === null) {
       return NextResponse.json(
-        { error: "Failed to fetch reviews" },
+        { error: REVIEWS_ERROR_MESSAGES.FETCH_REVIEWS_FAILED },
         { status: 500 }
       );
     }
@@ -60,7 +52,7 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error("[REVIEWS API] Error:", e);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR },
       { status: 500 }
     );
   }

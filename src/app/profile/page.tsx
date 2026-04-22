@@ -8,6 +8,7 @@ import Skeleton from '@/components/ui/Skeleton';
 import { useCart } from '@/context/CartContext';
 import ProfileSidebar from '@/components/profile/ProfileSidebar';
 import ProfileDashboard from '@/components/profile/ProfileDashboard';
+import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 import { Mail, Phone, MapPin, Trash2, Edit3, CheckCircle2, Truck, Plus } from 'lucide-react';
 
@@ -21,13 +22,10 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { user: authUser } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  const [loyalty, setLoyalty] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [profile, setProfile] = useState({
-    full_name: 'Mock User',
-    avatar_url: '',
-    email: 'mock@example.com',
-  });
-
   const [fullNameError, setFullNameError] = useState<string | null>(null);
   const [passwordSection, setPasswordSection] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -35,13 +33,37 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [updatingPassword, setUpdatingPassword] = useState(false);
 
+  const [orders, setOrders] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [wishlist, setWishlist] = useState<any[]>([]);
+
   useEffect(() => {
-    // Simulate API fetch
-    const timer = setTimeout(() => {
+    if (!authUser) {
+       setLoading(false);
+       return;
+    }
+
+    async function fetchData() {
+      const { getProfile, getLoyaltyInfo, getUserAddresses, getUserWishlist } = await import("@/lib/user-service");
+      const { listUserOrders } = await import("@/lib/order-service");
+      
+      const [p, l, addr, wish, ord] = await Promise.all([
+        getProfile(authUser!.id),
+        getLoyaltyInfo(authUser!.id),
+        getUserAddresses(authUser!.id),
+        getUserWishlist(authUser!.id),
+        listUserOrders(authUser!.id)
+      ]);
+      
+      if (p) setProfile(p);
+      if (l) setLoyalty(l);
+      setAddresses(addr || []);
+      setWishlist(wish || []);
+      setOrders(ord || []);
       setLoading(false);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
+    }
+    fetchData();
+  }, [authUser]);
 
   const getInitials = useCallback((name: string): string => {
     if (!name) return 'U';
@@ -143,7 +165,10 @@ export default function ProfilePage() {
                 transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
               >
                 {activeTab === "dashboard" && (
-                  <ProfileDashboard user={{ name: profile.full_name }} />
+                  <ProfileDashboard 
+                    user={{ name: profile?.full_name || "User", email: profile?.email }} 
+                    loyalty={loyalty}
+                  />
                 )}
 
                 {activeTab === "account" && (
@@ -296,84 +321,82 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="space-y-6">
-                      {[
-                        { id: "#BB-9921", date: "12 April 2024", status: "Sedang Dikirim", total: "Rp 850.000", items: [
-                          { name: "Sutra Dress Emerald", price: "Rp 450.000", image: "https://thenblank.com/cdn/shop/files/70A2411_800x.jpg?v=1712818241" },
-                          { name: "Pashmina Silk Cream", price: "Rp 250.000", image: "https://thenblank.com/cdn/shop/files/70A2312_800x.jpg?v=1712818241" },
-                          { name: "Gold Brooch", price: "Rp 150.000", image: "https://thenblank.com/cdn/shop/files/70A2215_800x.jpg?v=1712818241" }
-                        ]},
-                        { id: "#BB-9845", date: "28 Maret 2024", status: "Selesai", total: "Rp 1.250.000", items: [
-                          { name: "Luxury Abaya Black", price: "Rp 1.250.000", image: "https://thenblank.com/cdn/shop/files/70A2111_800x.jpg?v=1712818241" }
-                        ]},
-                      ].map((order, idx) => (
-                        <motion.div 
-                          key={order.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.1 }}
-                          className="surface-card overflow-hidden group border-stone-100 hover:border-brand-gold/30 transition-all duration-500"
-                        >
-                          <div className="bg-stone-50/50 p-6 flex flex-wrap items-center justify-between gap-4 border-b border-stone-100">
-                            <div className="flex items-center gap-8">
-                              <div>
-                                <p className="text-[9px] uppercase tracking-widest text-brand-softblack/40 mb-1">ID Pesanan</p>
-                                <p className="text-sm font-bold text-brand-softblack">{order.id}</p>
-                              </div>
-                              <div className="w-px h-8 bg-stone-200 hidden md:block" />
-                              <div>
-                                <p className="text-[9px] uppercase tracking-widest text-brand-softblack/40 mb-1">Tanggal</p>
-                                <p className="text-xs font-medium text-brand-softblack">{order.date}</p>
-                              </div>
-                              <div className="w-px h-8 bg-stone-200 hidden md:block" />
-                              <div>
-                                <p className="text-[9px] uppercase tracking-widest text-brand-softblack/40 mb-1">Status</p>
-                                <div className="flex items-center gap-2">
-                                  {order.status === 'Selesai' ? (
-                                    <CheckCircle2 size={12} className="text-emerald-500" />
-                                  ) : (
-                                    <Truck size={12} className="text-brand-gold animate-pulse" />
-                                  )}
-                                  <span className={`text-[10px] uppercase tracking-widest font-bold ${order.status === 'Selesai' ? 'text-emerald-500' : 'text-brand-gold'}`}>
-                                    {order.status}
-                                  </span>
+                      {orders.length === 0 ? (
+                        <div className="text-center py-20 bg-white border border-stone-100 rounded-xl">
+                          <ShoppingBag className="w-12 h-12 mx-auto text-stone-200 mb-4" />
+                          <p className="text-sm text-stone-400">Belum ada pesanan.</p>
+                        </div>
+                      ) : (
+                        orders.map((order, idx) => (
+                          <motion.div 
+                            key={order.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="surface-card overflow-hidden group border-stone-100 hover:border-brand-gold/30 transition-all duration-500"
+                          >
+                            <div className="bg-stone-50/50 p-6 flex flex-wrap items-center justify-between gap-4 border-b border-stone-100">
+                              <div className="flex items-center gap-8">
+                                <div>
+                                  <p className="text-[9px] uppercase tracking-widest text-brand-softblack/40 mb-1">ID Pesanan</p>
+                                  <p className="text-sm font-bold text-brand-softblack">#{order.id.split('-')[0].toUpperCase()}</p>
                                 </div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-[9px] uppercase tracking-widest text-brand-softblack/40 mb-1">Total</p>
-                              <p className="text-sm font-bold text-brand-gold">{order.total}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="p-6 space-y-6">
-                            {order.items.map((item, i) => (
-                              <div key={i} className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                  <div className="w-16 h-20 bg-stone-100 relative overflow-hidden flex-shrink-0">
-                                    <Image src={item.image} alt={item.name} fill className="object-cover" />
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-medium text-brand-softblack uppercase tracking-wider">{item.name}</p>
-                                    <p className="text-[10px] text-brand-softblack/40 mt-1">QTY: 1 • {item.price}</p>
+                                <div className="w-px h-8 bg-stone-200 hidden md:block" />
+                                <div>
+                                  <p className="text-[9px] uppercase tracking-widest text-brand-softblack/40 mb-1">Tanggal</p>
+                                  <p className="text-xs font-medium text-brand-softblack">{new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                                </div>
+                                <div className="w-px h-8 bg-stone-200 hidden md:block" />
+                                <div>
+                                  <p className="text-[9px] uppercase tracking-widest text-brand-softblack/40 mb-1">Status</p>
+                                  <div className="flex items-center gap-2">
+                                    {order.status === 'delivered' ? (
+                                      <CheckCircle2 size={12} className="text-emerald-500" />
+                                    ) : (
+                                      <Truck size={12} className="text-brand-gold animate-pulse" />
+                                    )}
+                                    <span className={`text-[10px] uppercase tracking-widest font-bold ${order.status === 'delivered' ? 'text-emerald-500' : 'text-brand-gold'}`}>
+                                      {order.status}
+                                    </span>
                                   </div>
                                 </div>
-                                <button className="px-6 py-2 border border-stone-100 text-[9px] uppercase tracking-widest text-brand-softblack/60 hover:border-brand-gold hover:text-brand-gold transition-colors">
-                                  Review
-                                </button>
                               </div>
-                            ))}
-                          </div>
+                              <div className="text-right">
+                                <p className="text-[9px] uppercase tracking-widest text-brand-softblack/40 mb-1">Total</p>
+                                <p className="text-sm font-bold text-brand-gold">Rp {order.total_amount.toLocaleString('id-ID')}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="p-6 space-y-6">
+                              {(order.order_items || []).map((item: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between">
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-16 h-20 bg-stone-100 relative overflow-hidden flex-shrink-0">
+                                      {item.product_image && <Image src={item.product_image} alt={item.product_name} fill className="object-cover" unoptimized={item.product_image.startsWith('/images/') || item.product_image.includes('localhost')} />}
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-medium text-brand-softblack uppercase tracking-wider">{item.product_name}</p>
+                                      <p className="text-[10px] text-brand-softblack/40 mt-1">QTY: {item.quantity} • Rp {item.price.toLocaleString('id-ID')}</p>
+                                    </div>
+                                  </div>
+                                  <button className="px-6 py-2 border border-stone-100 text-[9px] uppercase tracking-widest text-brand-softblack/60 hover:border-brand-gold hover:text-brand-gold transition-colors">
+                                    Review
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
 
-                          <div className="bg-stone-50/30 p-4 flex justify-end gap-4 border-t border-stone-100">
-                             <button className="text-[9px] uppercase tracking-widest font-bold text-brand-softblack/40 hover:text-brand-softblack transition-colors">
-                               Detail Pesanan
-                             </button>
-                             <button className="text-[9px] uppercase tracking-widest font-bold text-brand-gold hover:opacity-70 transition-colors">
-                               Beli Lagi
-                             </button>
-                          </div>
-                        </motion.div>
-                      ))}
+                            <div className="bg-stone-50/30 p-4 flex justify-end gap-4 border-t border-stone-100">
+                               <button className="text-[9px] uppercase tracking-widest font-bold text-brand-softblack/40 hover:text-brand-softblack transition-colors">
+                                 Detail Pesanan
+                               </button>
+                               <button className="text-[9px] uppercase tracking-widest font-bold text-brand-gold hover:opacity-70 transition-colors">
+                                 Beli Lagi
+                               </button>
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
@@ -392,51 +415,52 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {[
-                        { type: 'Rumah Utama', name: 'Mock User', phone: '+62 812 3456 7890', address: 'Jl. Kemang Raya No. 12, Mampang Prapatan, Jakarta Selatan, 12730', isDefault: true },
-                        { type: 'Kantor', name: 'Mock User', phone: '+62 812 3456 7890', address: 'SCBD District 8, Treasury Tower Lt. 15, Senayan, Jakarta Selatan, 12190', isDefault: false },
-                      ].map((addr, idx) => (
-                        <motion.div 
-                          key={idx}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: idx * 0.1 }}
-                          className={`surface-card p-8 relative group transition-all duration-500 ${addr.isDefault ? 'border-brand-gold/30 ring-1 ring-brand-gold/5' : 'hover:border-stone-200'}`}
-                        >
-                          <div className="flex items-start justify-between mb-6">
-                            <div className="flex items-center gap-3">
-                              <span className={`px-3 py-1 text-[8px] uppercase tracking-widest font-bold rounded-sm ${addr.isDefault ? 'bg-brand-gold text-white' : 'bg-stone-100 text-brand-softblack/40'}`}>
-                                {addr.type}
-                              </span>
-                              {addr.isDefault && (
-                                <span className="text-[8px] uppercase tracking-widest font-bold text-brand-gold">Utama</span>
-                              )}
+                      {addresses.length === 0 ? (
+                        <div className="col-span-full text-center py-12 bg-white border border-stone-100 rounded-xl">
+                          <MapPin className="w-10 h-10 mx-auto text-stone-200 mb-4" />
+                          <p className="text-sm text-stone-400">Belum ada alamat tersimpan.</p>
+                        </div>
+                      ) : (
+                        addresses.map((addr, idx) => (
+                          <motion.div 
+                            key={addr.id}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className={`surface-card p-8 relative group transition-all duration-500 ${addr.is_default ? 'border-brand-gold/30 ring-1 ring-brand-gold/5' : 'hover:border-stone-200'}`}
+                          >
+                            <div className="flex items-start justify-between mb-6">
+                              <div className="flex items-center gap-3">
+                                <span className={`px-3 py-1 text-[8px] uppercase tracking-widest font-bold rounded-sm ${addr.is_default ? 'bg-brand-gold text-white' : 'bg-stone-100 text-brand-softblack/40'}`}>
+                                  {addr.is_default ? 'Alamat Utama' : 'Alamat'}
+                                </span>
+                              </div>
+                              <div className="flex gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button className="p-2 text-brand-softblack/30 hover:text-brand-gold transition-colors"><Edit3 size={14} /></button>
+                                {!addr.is_default && <button className="p-2 text-brand-softblack/30 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>}
+                              </div>
                             </div>
-                            <div className="flex gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button className="p-2 text-brand-softblack/30 hover:text-brand-gold transition-colors"><Edit3 size={14} /></button>
-                              {!addr.isDefault && <button className="p-2 text-brand-softblack/30 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>}
+  
+                            <div className="space-y-4">
+                              <p className="text-sm font-bold text-brand-softblack uppercase tracking-widest">{addr.recipient_name}</p>
+                              <div className="flex items-center gap-3 text-brand-softblack/60">
+                                <Phone size={12} className="text-brand-gold/40" />
+                                <p className="text-xs font-light">{addr.phone_number}</p>
+                              </div>
+                              <div className="flex items-start gap-3 text-brand-softblack/60">
+                                <MapPin size={12} className="text-brand-gold/40 mt-1" />
+                                <p className="text-xs font-light leading-relaxed">{addr.street}, {addr.city}, {addr.province} {addr.zip_code}</p>
+                              </div>
                             </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            <p className="text-sm font-bold text-brand-softblack uppercase tracking-widest">{addr.name}</p>
-                            <div className="flex items-center gap-3 text-brand-softblack/60">
-                              <Phone size={12} className="text-brand-gold/40" />
-                              <p className="text-xs font-light">{addr.phone}</p>
-                            </div>
-                            <div className="flex items-start gap-3 text-brand-softblack/60">
-                              <MapPin size={12} className="text-brand-gold/40 mt-1" />
-                              <p className="text-xs font-light leading-relaxed">{addr.address}</p>
-                            </div>
-                          </div>
-
-                          {!addr.isDefault && (
-                            <button className="mt-8 text-[9px] uppercase tracking-[0.2em] font-bold text-brand-softblack/30 hover:text-brand-gold transition-colors w-full py-3 border border-dashed border-stone-200 hover:border-brand-gold/40 rounded-sm">
-                              Jadikan Alamat Utama
-                            </button>
-                          )}
-                        </motion.div>
-                      ))}
+  
+                            {!addr.is_default && (
+                              <button className="mt-8 text-[9px] uppercase tracking-[0.2em] font-bold text-brand-softblack/30 hover:text-brand-gold transition-colors w-full py-3 border border-dashed border-stone-200 hover:border-brand-gold/40 rounded-sm">
+                                Jadikan Alamat Utama
+                              </button>
+                            )}
+                          </motion.div>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
@@ -454,34 +478,36 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                      {[
-                        { name: "Sutra Dress Emerald", price: "Rp 450.000", image: "https://thenblank.com/cdn/shop/files/70A2411_800x.jpg?v=1712818241" },
-                        { name: "Pashmina Silk Cream", price: "Rp 250.000", image: "https://thenblank.com/cdn/shop/files/70A2312_800x.jpg?v=1712818241" },
-                        { name: "Gold Brooch", price: "Rp 150.000", image: "https://thenblank.com/cdn/shop/files/70A2215_800x.jpg?v=1712818241" },
-                        { name: "Luxury Abaya Black", price: "Rp 1.250.000", image: "https://thenblank.com/cdn/shop/files/70A2111_800x.jpg?v=1712818241" },
-                      ].map((item, idx) => (
-                        <motion.div 
-                          key={idx}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.1 }}
-                          className="group"
-                        >
-                          <div className="relative aspect-[3/4] bg-stone-100 mb-4 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-700">
-                             <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-1000" />
-                             <div className="absolute inset-0 bg-brand-softblack/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                             <button className="absolute bottom-4 left-4 right-4 py-3 bg-white text-brand-softblack text-[9px] uppercase tracking-widest font-bold translate-y-12 group-hover:translate-y-0 transition-transform duration-500 shadow-lg">
-                               Tambah ke Keranjang
-                             </button>
-                             <button className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur-sm rounded-full text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <Trash2 size={12} />
-                             </button>
-                          </div>
-                          <p className="text-[10px] uppercase tracking-widest text-brand-softblack/50 mb-1">Edisi Terbatas</p>
-                          <h4 className="text-xs font-bold text-brand-softblack uppercase tracking-wider mb-2">{item.name}</h4>
-                          <p className="text-xs font-light text-brand-gold">{item.price}</p>
-                        </motion.div>
-                      ))}
+                      {wishlist.length === 0 ? (
+                        <div className="col-span-full text-center py-20 bg-white border border-stone-100 rounded-xl">
+                          <ShoppingBag className="w-12 h-12 mx-auto text-stone-200 mb-4" />
+                          <p className="text-sm text-stone-400">Wishlist Anda kosong.</p>
+                        </div>
+                      ) : (
+                        wishlist.map((item, idx) => (
+                          <motion.div 
+                            key={item.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="group"
+                          >
+                            <div className="relative aspect-[3/4] bg-stone-100 mb-4 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-700">
+                               {item.products?.image_url && <Image src={item.products.image_url} alt={item.products.name} fill className="object-cover group-hover:scale-110 transition-transform duration-1000" unoptimized={item.products.image_url.startsWith('/images/')} />}
+                               <div className="absolute inset-0 bg-brand-softblack/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                               <button className="absolute bottom-4 left-4 right-4 py-3 bg-white text-brand-softblack text-[9px] uppercase tracking-widest font-bold translate-y-12 group-hover:translate-y-0 transition-transform duration-500 shadow-lg">
+                                 Tambah ke Keranjang
+                               </button>
+                               <button className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur-sm rounded-full text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <Trash2 size={12} />
+                               </button>
+                            </div>
+                            <p className="text-[10px] uppercase tracking-widest text-brand-softblack/50 mb-1">{item.products?.tagline || 'Edisi Terbatas'}</p>
+                            <h4 className="text-xs font-bold text-brand-softblack uppercase tracking-wider mb-2">{item.products?.name}</h4>
+                            <p className="text-xs font-light text-brand-gold">Rp {item.products?.base_price.toLocaleString('id-ID')}</p>
+                          </motion.div>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}

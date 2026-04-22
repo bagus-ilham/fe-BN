@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/utils/supabase';
 import { NextRequest, NextResponse } from 'next/server';
+import { API_ERROR_MESSAGES, cleanupReservationsSuccessMessage } from '@/constants/api-messages';
 
 /**
  * API Route para limpeza automática de reservas expiradas.
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     const cronSecret = process.env.CRON_SECRET;
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: API_ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
     }
 
     const supabase = getSupabaseAdmin();
@@ -28,11 +29,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       cleaned: data || 0,
-      message: `Cleaned up ${data || 0} expired reservation(s)`,
+      message: cleanupReservationsSuccessMessage(data || 0),
     });
   } catch (err: unknown) {
     console.error('Error in cleanup-reservations cron:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR }, { status: 500 });
   }
 }
 

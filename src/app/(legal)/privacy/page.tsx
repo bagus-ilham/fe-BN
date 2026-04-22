@@ -10,10 +10,10 @@ export const metadata: Metadata = {
 export default async function PrivacidadePage() {
   const cmsPage = await getPublishedCMSPageBySlug("legal-privacy");
   
-  if (cmsPage && cmsPage.blocks.length > 0) {
+  if (cmsPage && Array.isArray(cmsPage.blocks) && cmsPage.blocks.length > 0) {
     return (
       <main className="bg-brand-offwhite page-shell">
-        <CMSBlocksRenderer blocks={cmsPage.blocks} />
+        <CMSBlocksRenderer blocks={cmsPage.blocks as any[]} />
       </main>
     );
   }

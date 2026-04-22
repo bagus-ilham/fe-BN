@@ -1,5 +1,3 @@
-import { PRODUCTS } from "@/constants/products";
-
 export interface ProductDetailRow {
   label: string;
   value: string;
@@ -7,6 +5,7 @@ export interface ProductDetailRow {
 
 export interface ProductDetailsTableProps {
   productId: string;
+  highlights?: any[];
   className?: string;
 }
 
@@ -14,56 +13,17 @@ const DEFAULT_CARE_INSTRUCTIONS = "Cuci dengan warna serupa, jangan gunakan pemu
 
 export default function ProductDetailsTable({
   productId,
+  highlights = [],
   className = "",
 }: ProductDetailsTableProps) {
-  const product = PRODUCTS.find((p) => p.id === productId);
-
-  if (!product) return null;
-
-  // In a real app, these details would come from the product object/database
-  // For this fashion rebranding, we provide context-aware details
-  const getDetails = (id: string): ProductDetailRow[] => {
-    switch (id) {
-      case "prod_1":
-        return [
-          { label: "Bahan", value: "Batik Premium" },
-          { label: "Fit", value: "True to size (A-Line)" },
-          { label: "Elastisitas", value: "Tidak Ada" },
-          { label: "Ketebalan", value: "Sedang" },
-          { label: "Produksi", value: "Handmade di Jawa Tengah" },
-        ];
-      case "prod_2":
-      case "prod_5":
-        return [
-          { label: "Bahan", value: "Linen Premium Impor" },
-          { label: "Fit", value: "Relaxed Fit" },
-          { label: "Ketebalan", value: "Ringan (Breathable)" },
-          { label: "Tekstur", value: "Khas Serat Linen" },
-          { label: "Produksi", value: "Jakarta, Indonesia" },
-        ];
-      case "prod_3":
-        return [
-          { label: "Bahan", value: "Plisket Premium" },
-          { label: "Fit", value: "Adjustable (Waistband)" },
-          { label: "Tekstur", value: "Lipit Halus" },
-          { label: "Produksi", value: "Bandung, Indonesia" },
-        ];
-      case "prod_4":
-        return [
-          { label: "Bahan", value: "Katun Combed 30s" },
-          { label: "Fit", value: "Standar" },
-          { label: "Kenyamanan", value: "Sangat Lembut" },
-          { label: "Produksi", value: "Solo, Indonesia" },
-        ];
-      default:
-        return [
-          { label: "Bahan", value: "Kualitas Premium" },
-          { label: "Produksi", value: "Indonesia" },
-        ];
-    }
-  };
-
-  const details = getDetails(productId);
+  // Use highlights from the database if available, otherwise use a default row
+  const details: ProductDetailRow[] = highlights && highlights.length > 0 
+    ? highlights.map(h => ({ label: h.name, value: h.detail }))
+    : [
+        { label: "Kualitas", value: "Premium Fashion" },
+        { label: "Produksi", value: "Local Artisans" },
+        { label: "Edisi", value: "benangbaju Original" }
+      ];
 
   return (
     <div

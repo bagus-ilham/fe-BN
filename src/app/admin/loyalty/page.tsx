@@ -1,3 +1,4 @@
+import { getAdminLoyaltyOverview } from "@/lib/user-service";
 import { 
   Trophy, 
   Users, 
@@ -6,41 +7,28 @@ import {
   Star
 } from "lucide-react";
 
-const topUsers = [
-  { id: '1', tier: 'Platinum', points: 12500, profiles: { full_name: 'Dewi Lestari', email: 'dewi@example.com' } },
-  { id: '2', tier: 'Gold', points: 8400, profiles: { full_name: 'Reza Rahadian', email: 'reza@example.com' } },
-  { id: '3', tier: 'Silver', points: 3200, profiles: { full_name: 'Dian Sastro', email: 'dian@example.com' } },
-];
-
-const recentHistory = [
-  { id: 'h1', points_change: 500, reason: 'Purchase #1024',      created_at: "2024-05-20T10:00:00Z",
-      auth_users: { email: 'user1@example.com' } 
-    },
-    { 
-      id: 'h2', 
-      points_change: 100, 
-      reason: 'Referral bonus', 
-      created_at: "2024-05-20T09:00:00Z",
-      auth_users: { email: 'user2@example.com' } 
-    },
-];
-
 export default async function AdminLoyaltyPage() {
-  
+  const { topUsers, recentHistory, stats } = await getAdminLoyaltyOverview(10);
+
 
   type LoyaltyUserRow = {
     id: string;
+    user_id: string;
     tier: string;
     points: number;
     profiles?: { full_name?: string | null; email?: string | null } | null;
   };
   type LoyaltyHistoryRow = {
     id: string;
+    user_id: string;
     points_change: number;
     reason: string;
     created_at: string;
     auth_users?: { email?: string | null } | null;
   };
+
+  const normalizedTopUsers: LoyaltyUserRow[] = (topUsers || []) as LoyaltyUserRow[];
+  const normalizedRecentHistory: LoyaltyHistoryRow[] = (recentHistory || []) as LoyaltyHistoryRow[];
 
   return (
     <div className="space-y-8">
@@ -70,10 +58,10 @@ export default async function AdminLoyaltyPage() {
             <div className="p-2 bg-brand-green/10 text-brand-green rounded-lg">
               <Trophy size={20} />
             </div>
-            <span className="text-[10px] font-bold text-brand-green">+12%</span>
+            <span className="text-[10px] font-bold text-brand-green">30 Hari</span>
           </div>
-          <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Total Poin Diterbitkan</div>
-          <div className="text-2xl font-light text-brand-softblack mt-1">1.2M</div>
+          <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Poin Diterbitkan (30 Hari)</div>
+          <div className="text-2xl font-light text-brand-softblack mt-1">{stats.totalPointsIssued.toLocaleString("id-ID")}</div>
         </div>
         <div className="surface-card p-6 rounded-sm">
           <div className="flex items-center justify-between mb-4">
@@ -81,8 +69,8 @@ export default async function AdminLoyaltyPage() {
               <Users size={20} />
             </div>
           </div>
-          <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Referrer Aktif</div>
-          <div className="text-2xl font-light text-brand-softblack mt-1">452</div>
+          <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Member Loyalty Aktif</div>
+          <div className="text-2xl font-light text-brand-softblack mt-1">{stats.activeMembers.toLocaleString("id-ID")}</div>
         </div>
         <div className="surface-card p-6 rounded-sm">
           <div className="flex items-center justify-between mb-4">
@@ -90,8 +78,8 @@ export default async function AdminLoyaltyPage() {
               <TrendingUp size={20} />
             </div>
           </div>
-          <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Poin Ditukar</div>
-          <div className="text-2xl font-light text-brand-softblack mt-1">85.4K</div>
+          <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Poin Ditukar (30 Hari)</div>
+          <div className="text-2xl font-light text-brand-softblack mt-1">{stats.totalPointsRedeemed.toLocaleString("id-ID")}</div>
         </div>
         <div className="surface-card p-6 rounded-sm">
           <div className="flex items-center justify-between mb-4">
@@ -99,8 +87,8 @@ export default async function AdminLoyaltyPage() {
               <Star size={20} />
             </div>
           </div>
-          <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Konversi Referral</div>
-          <div className="text-2xl font-light text-brand-softblack mt-1">8.5%</div>
+          <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Rasio Redeem Poin</div>
+          <div className="text-2xl font-light text-brand-softblack mt-1">{stats.referralConversionRate.toFixed(1)}%</div>
         </div>
       </div>
 
@@ -121,7 +109,7 @@ export default async function AdminLoyaltyPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {(topUsers as LoyaltyUserRow[] | null)?.map((user) => (
+                {(normalizedTopUsers as LoyaltyUserRow[] | null)?.map((user) => (
                   <tr key={user.id} className="hover:bg-brand-offwhite/20 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -143,6 +131,13 @@ export default async function AdminLoyaltyPage() {
                     </td>
                   </tr>
                 ))}
+                {normalizedTopUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-10 text-center text-xs text-brand-softblack/40 italic">
+                      Belum ada data loyalty untuk ditampilkan.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -154,7 +149,7 @@ export default async function AdminLoyaltyPage() {
             <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-brand-softblack/60">Aktivitas Terbaru</h3>
           </div>
           <div className="flex-1 p-6 space-y-6">
-            {(recentHistory as LoyaltyHistoryRow[] | null)?.map((log) => (
+            {(normalizedRecentHistory as LoyaltyHistoryRow[] | null)?.map((log) => (
               <div key={log.id} className="flex gap-4">
                 <div className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${
                   log.points_change > 0 ? 'bg-brand-green' : 'bg-red-400'
@@ -169,6 +164,11 @@ export default async function AdminLoyaltyPage() {
                 </div>
               </div>
             ))}
+            {normalizedRecentHistory.length === 0 && (
+              <p className="text-xs text-brand-softblack/40 italic">
+                Belum ada aktivitas loyalty terbaru.
+              </p>
+            )}
           </div>
         </div>
       </div>

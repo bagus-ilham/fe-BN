@@ -49,9 +49,9 @@ export default function CartDrawer() {
         items: cart.map((i) => ({
           id: i.id,
           name: i.name,
-          price: i.price,
+          price: i.base_price,
           quantity: i.quantity,
-          category: i.category,
+          category: i.category_id || undefined,
         })),
       });
     }
@@ -218,7 +218,7 @@ export default function CartDrawer() {
                             className="relative block h-[88px] w-[72px] shrink-0 overflow-hidden rounded-sm bg-brand-champagne/30 group"
                           >
                             <Image
-                              src={item.image}
+                              src={item.image_url || "/images/products/glow.jpeg"}
                               alt={item.name}
                               fill
                               className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -235,8 +235,8 @@ export default function CartDrawer() {
                             >
                               {item.name}
                             </Link>
-                            <p className="text-sm font-light text-brand-softblack/70 mb-3">
-                              {formatPrice(item.price)}
+                             <p className="text-sm font-light text-brand-softblack/70 mb-3">
+                              {formatPrice(item.base_price)}
                               {item.quantity > 1 && (
                                 <span className="ml-1 text-brand-softblack/40 text-xs">
                                   × {item.quantity}
@@ -279,8 +279,8 @@ export default function CartDrawer() {
                           </div>
 
                           {/* Line total */}
-                          <p className="shrink-0 text-right text-sm font-medium tabular-nums text-brand-softblack self-start pt-0.5">
-                            {formatPrice(item.price * item.quantity)}
+                           <p className="shrink-0 text-right text-sm font-medium tabular-nums text-brand-softblack self-start pt-0.5">
+                            {formatPrice(item.base_price * item.quantity)}
                           </p>
                         </motion.li>
                       );

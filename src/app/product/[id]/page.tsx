@@ -1,6 +1,6 @@
 import ProductPageContent from "@/components/ProductPageContent";
-import { Product, PRODUCTS } from "@/constants/products";
-import { Review } from "@/types/database";
+import { Product } from "@/constants/products";
+import { Review, ProductRow } from "@/types/database";
 import { notFound } from "next/navigation";
 
 interface PageProps {
@@ -11,27 +11,18 @@ const BASE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://benangbaju.com";
 
 export async function generateStaticParams() {
-  
-  return PRODUCTS.map((p) => ({ id: p.id }));
+  const { listActiveProducts } = await import("@/lib/application/products/product-query-service");
+  const products = await listActiveProducts(100);
+  return products.map((p) => ({ id: p.id }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<import("next").Metadata> {
   const { id } = await params;
   
-  let resolvedProduct = null;
+  const { getProductById } = await import("@/lib/application/products/product-query-service");
+  let resolvedProduct = await getProductById(id);
   
-  if (!resolvedProduct) {
-    const fallback = PRODUCTS.find((pr: Product) => pr.id === id);
-    if (fallback) {
-      resolvedProduct = {
-        id: fallback.id,
-        name: fallback.name,
-        tagline: fallback.tagline,
-        description: fallback.description,
-        image_url: fallback.image
-      } as any;
-    }
-  }
+  // Removed fallback to PRODUCTS constant
 
   if (!resolvedProduct) {
     return {
@@ -84,65 +75,34 @@ export async function generateMetadata({ params }: PageProps): Promise<import("n
 export default async function ProductPage({ params }: PageProps) {
   const { id } = await params;
   
+  // 1. Coba ambil dari Database Supabase (v6.6)
+  let productData: any = null;
+  let recommendedProducts: any[] = [];
   
-  // Se houver erro ou tidak FIND di DATABASE, mencari di konstanta lokal (fallback)
-  let productData = null; 
-  
-  if (!productData) {
-    const fallbackProduct = PRODUCTS.find((prod: Product) => prod.id === id);
-    if (fallbackProduct) {
-      // Map constant to DB-like structure for the mapping logic below
-      productData = {
-        id: fallbackProduct.id,
-        name: fallbackProduct.name,
-        price: fallbackProduct.price,
-        old_price: fallbackProduct.oldPrice,
-        image_url: fallbackProduct.image,
-        description: fallbackProduct.description,
-        category: fallbackProduct.category,
-        badge: fallbackProduct.badge,
-        tagline: fallbackProduct.tagline,
-        short_description: fallbackProduct.shortDescription,
-        units_sold: fallbackProduct.unitsSold,
-        cta_primary: fallbackProduct.ctaPrimary,
-        additional_images: fallbackProduct.additionalImages,
-        color_variants: fallbackProduct.colorVariants
-      };
+  try {
+    const { getProductById, getRecommendedProducts } = await import("@/lib/application/products/product-query-service");
+    const dbProduct = await getProductById(id);
+    if (dbProduct) {
+      productData = dbProduct;
     }
+    
+    recommendedProducts = await getRecommendedProducts(id);
+  } catch (err) {
+    console.error("Database fetch failed, using fallback:", err);
   }
 
+  // Fallback to local constants removed
+
   if (!productData) notFound();
-  
-  const p_final = productData;
-
-
-  const PRODUCT_BADGES = new Set<Product["badge"]>(["bestseller", "new", "vegan", "kit"]);
-
-  // Map to UI Product interface
-  const product: Product = {
-    id: p_final.id,
-    name: p_final.name,
-    price: p_final.price,
-    oldPrice: p_final.old_price,
-    image: p_final.image_url || "",
-    description: p_final.description || "",
-    category: p_final.category,
-    badge: PRODUCT_BADGES.has(p_final.badge as Product["badge"])
-      ? (p_final.badge as Product["badge"])
-      : undefined,
-    tagline: p_final.tagline,
-    shortDescription: p_final.short_description,
-    unitsSold: p_final.units_sold,
-    ctaPrimary: p_final.cta_primary,
-    additionalImages: typeof p_final.additional_images === 'string' ? JSON.parse(p_final.additional_images) : (p_final.additional_images || []),
-    colorVariants: p_final.color_variants
+  const product = productData as ProductRow & {
+    color_variants?: any[];
+    additional_images?: string[];
   };
 
   const productUrl = `${BASE_URL}/product/${product.id}`;
-  const productImageUrl = product.image;
+  const productImageUrl = product.image_url;
 
-  
-  const reviewCount = product.reviews || 0;
+  const reviewCount = product.reviews_count || 0;
   const ratingValue = product.rating || null;
 
   const jsonLd = {
@@ -163,7 +123,7 @@ export default async function ProductPage({ params }: PageProps) {
           "@type": "Offer",
           url: productUrl,
           priceCurrency: "IDR",
-          price: product.price.toFixed(0),
+          price: (product.base_price || 0).toFixed(0),
           availability: "https://schema.org/InStock",
           itemCondition: "https://schema.org/NewCondition",
           seller: {
@@ -181,7 +141,6 @@ export default async function ProductPage({ params }: PageProps) {
             worstRating: 1,
           },
         }),
-
       },
       {
         "@type": "BreadcrumbList",
@@ -209,7 +168,7 @@ export default async function ProductPage({ params }: PageProps) {
     ],
   };
 
-  const productImgEncoded = encodeURIComponent(product.image);
+  const productImgEncoded = encodeURIComponent(product.image_url || "");
   const productImgSrcSet = [320, 640, 828]
     .map((w) => `/_next/image?url=${productImgEncoded}&w=${w}&q=80 ${w}w`)
     .join(", ");
@@ -227,7 +186,7 @@ export default async function ProductPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ProductPageContent product={product} />
+      <ProductPageContent product={product} initialRecommendations={recommendedProducts} />
     </>
   );
 }

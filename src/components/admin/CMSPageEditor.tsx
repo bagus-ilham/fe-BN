@@ -3,11 +3,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { Save, Eye, EyeOff, Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Settings2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { CMSBlock, CMSPage, CMSPageVersion } from "@/types/database";
+import type { CmsPage, CmsPageVersion, CmsBlock } from "@/types/database";
+import { saveCMSPage, listCMSPageVersionsForAdmin } from "@/lib/cms-service";
 
 interface CMSPageEditorProps {
-  page: CMSPage;
-  initialVersions: CMSPageVersion[];
+  page: CmsPage;
+  initialVersions: CmsPageVersion[];
 }
 
 const VERSION_PAGE_SIZE = 20;
@@ -71,13 +72,13 @@ function formatListLines(value: unknown): string {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string").join("\n") : "";
 }
 
-function createEmptyBlock(type: CMSBlock["type"]): CMSBlock {
+function createEmptyBlock(type: CmsBlock["type"]): CmsBlock {
   const id =
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-  const byType: Record<CMSBlock["type"], Record<string, unknown>> = {
+  const byType: Record<CmsBlock["type"], Record<string, unknown>> = {
     hero: { eyebrow: "", title: "Judul", subtitle: "" },
     rich_text: { content: "" },
     feature_list: { title: "Daftar Fitur", items: [] },
@@ -101,11 +102,9 @@ export default function CMSPageEditor({
   initialVersions,
 }: CMSPageEditorProps) {
   const [title, setTitle] = useState(page.title);
-  const [seoTitle, setSeoTitle] = useState(page.seo_title ?? "");
-  const [seoDescription, setSeoDescription] = useState(page.seo_description ?? "");
   const [isPublished, setIsPublished] = useState(page.is_published);
-  const [blocks, setBlocks] = useState<CMSBlock[]>(page.blocks ?? []);
-  const [versions, setVersions] = useState<CMSPageVersion[]>(initialVersions);
+  const [blocks, setBlocks] = useState<CmsBlock[]>(page.blocks as unknown as CmsBlock[] ?? []);
+  const [versions, setVersions] = useState<CmsPageVersion[]>(initialVersions);
   const [hasMoreVersions, setHasMoreVersions] = useState(
     initialVersions.length >= VERSION_PAGE_SIZE,
   );
@@ -135,7 +134,7 @@ export default function CMSPageEditor({
     );
   };
 
-  const updateBlockType = (index: number, type: CMSBlock["type"]) => {
+  const updateBlockType = (index: number, type: CmsBlock["type"]) => {
     setBlocks((prev) =>
       prev.map((block, i) => (i === index ? { ...createEmptyBlock(type), id: block.id } : block)),
     );
@@ -151,25 +150,24 @@ export default function CMSPageEditor({
       return cloned;
     });
   };
-
   const refreshVersions = useCallback(async () => {
-    // Mocking the refresh of versions locally
-    console.log("Mock: Refreshing versions for", page.slug);
-  }, [page.slug]);
+    try {
+      const data = await listCMSPageVersionsForAdmin(page.id);
+      setVersions(data);
+    } catch (e) {
+      console.error("Gagal memuat ulang versi:", e);
+    }
+  }, [page.id]);
 
   const loadMoreVersions = useCallback(async () => {
-    // Mocking loading more versions
-    console.log("Mock: Loading more versions for", page.slug);
+    // Basic implementation, for simplicity we just set hasMore to false
     setHasMoreVersions(false);
-  }, [page.slug]);
+  }, []);
 
   const getVersionLabel = useCallback(
-    (index: number, version: CMSPageVersion) => {
+    (index: number, version: CmsPageVersion) => {
       const versionNumber = versions.length - index;
-      const titleSnippet = version.title?.trim()
-        ? version.title.trim().slice(0, 36)
-        : "Tanpa Judul";
-      return `v${Math.max(versionNumber, 1)} · ${titleSnippet}`;
+      return `v${Math.max(versionNumber, 1)} · Versi Konten`;
     },
     [versions.length],
   );
@@ -179,27 +177,19 @@ export default function CMSPageEditor({
     setMessage(null);
     setError(null);
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
     try {
-      // Create a mock new version
-      const newVersion: CMSPageVersion = {
-        id: crypto.randomUUID(),
-        page_id: page.id,
-        created_at: new Date().toISOString(),
+      await saveCMSPage({
+        id: page.id,
         title,
-        seo_title: seoTitle,
-        seo_description: seoDescription,
-        blocks,
-        is_published: isPublished,
-        edited_by: null,
-      };
+        blocks: blocks as any,
+        is_published: isPublished
+      });
 
-      setVersions((prev) => [newVersion, ...prev]);
-      setMessage("Konten berhasil disimpan (Simulasi).");
-    } catch (e: unknown) {
-      setError("Terjadi kesalahan simulasi.");
+      await refreshVersions();
+      setMessage("Konten berhasil disimpan ke database.");
+    } catch (e: any) {
+      console.error("Save error:", e);
+      setError(e.message || "Gagal menyimpan konten.");
     } finally {
       setLoading(false);
     }
@@ -209,22 +199,15 @@ export default function CMSPageEditor({
     setLoading(true);
     setMessage(null);
     setError(null);
-    
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
 
     try {
       const version = versions.find(v => v.id === versionId);
       if (!version) throw new Error("Versi tidak ditemukan");
 
-      setTitle(version.title);
-      setSeoTitle(version.seo_title ?? "");
-      setSeoDescription(version.seo_description ?? "");
-      setIsPublished(version.is_published);
-      setBlocks(version.blocks ?? []);
-      setMessage("Versi berhasil dipulihkan (Simulasi).");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Gagal restore versi.");
+      setBlocks(version.blocks as unknown as CmsBlock[] ?? []);
+      setMessage("Versi dipulihkan ke editor. Klik 'Simpan Konten' untuk mempublikasikan.");
+    } catch (e: any) {
+      setError(e.message || "Gagal restore versi.");
     } finally {
       setLoading(false);
     }
@@ -249,7 +232,6 @@ export default function CMSPageEditor({
       <div className="surface-card p-6 md:p-8 space-y-8">
         {/* SEO & Status */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-b border-brand-softblack/5 pb-8">
-          <div className="space-y-4">
             <div>
               <label className="block text-[10px] uppercase tracking-[0.2em] text-brand-softblack/50 mb-2 font-medium">
                 Judul Halaman
@@ -261,31 +243,9 @@ export default function CMSPageEditor({
                 className="w-full bg-brand-offwhite/50 border-b border-brand-softblack/10 px-0 py-2 text-sm text-brand-softblack focus:border-brand-green outline-none transition-colors"
               />
             </div>
-            <div>
-              <label className="block text-[10px] uppercase tracking-[0.2em] text-brand-softblack/50 mb-2 font-medium">
-                SEO Title
-              </label>
-              <input
-                type="text"
-                value={seoTitle}
-                onChange={(e) => setSeoTitle(e.target.value)}
-                className="w-full bg-brand-offwhite/50 border-b border-brand-softblack/10 px-0 py-2 text-sm text-brand-softblack focus:border-brand-green outline-none transition-colors"
-              />
-            </div>
           </div>
           
           <div className="space-y-4">
-            <div>
-              <label className="block text-[10px] uppercase tracking-[0.2em] text-brand-softblack/50 mb-2 font-medium">
-                SEO Description
-              </label>
-              <textarea
-                value={seoDescription}
-                onChange={(e) => setSeoDescription(e.target.value)}
-                rows={3}
-                className="w-full bg-brand-offwhite/50 border-b border-brand-softblack/10 px-0 py-2 text-sm text-brand-softblack focus:border-brand-green outline-none transition-colors resize-none"
-              />
-            </div>
             <div className="flex items-center gap-4 pt-2">
               <span className="text-[10px] uppercase tracking-[0.2em] text-brand-softblack/50 font-medium">Status Publikasi:</span>
               <button
@@ -344,7 +304,7 @@ export default function CMSPageEditor({
                     <GripVertical size={16} className="text-stone-300 cursor-grab active:cursor-grabbing" />
                     <select
                       value={block.type}
-                      onChange={(e) => updateBlockType(index, e.target.value as CMSBlock["type"])}
+                      onChange={(e) => updateBlockType(index, e.target.value as CmsBlock["type"])}
                       className="bg-transparent text-[10px] uppercase tracking-widest font-bold text-brand-softblack focus:outline-none appearance-none cursor-pointer"
                     >
                       <option value="hero">Hero Banner</option>
@@ -467,7 +427,7 @@ export default function CMSPageEditor({
 
         {/* Add Block Buttons */}
         <div className="pt-4 border-t border-stone-100 flex flex-wrap gap-3">
-          {(["hero", "rich_text", "feature_list", "faq", "cta", "gallery"] as CMSBlock["type"][]).map((type) => (
+          {(["hero", "rich_text", "feature_list", "faq", "cta", "gallery"] as CmsBlock["type"][]).map((type) => (
             <button
               key={type}
               type="button"
@@ -479,7 +439,6 @@ export default function CMSPageEditor({
             </button>
           ))}
         </div>
-      </div>
       </div>
 
       {showPreview && (
@@ -523,7 +482,7 @@ export default function CMSPageEditor({
                     {formatVersionDate(version.created_at)}
                   </p>
                   <p className="text-[10px] uppercase tracking-wider text-brand-softblack/50 mt-1">
-                    {version.is_published ? "Status: Published" : "Status: Draft"} | {version.blocks.length} blok | editor: {version.edited_by ? "Admin" : "Sistem"}
+                    {Array.isArray(version.blocks) ? version.blocks.length : 0} blok | editor: {version.edited_by ? "Admin" : "Sistem"}
                   </p>
                 </div>
                 <button

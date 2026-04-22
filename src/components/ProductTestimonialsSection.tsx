@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
-import { PRODUCTS } from "@/constants/products";
-
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 interface FeaturedReview {
   id: string;
   product_id: string;
@@ -12,8 +11,6 @@ interface FeaturedReview {
   author_name: string;
   created_at: string;
 }
-
-const productNameById = new Map(PRODUCTS.map((p) => [p.id, p.name]));
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -58,6 +55,7 @@ const FALLBACK_REVIEWS: FeaturedReview[] = [
 ];
 
 export default function ProductTestimonialsSection() {
+  const { settings } = useSiteSettings();
   const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-60px" });
   const [reviews, setReviews] = useState<FeaturedReview[]>([]);
@@ -116,7 +114,7 @@ export default function ProductTestimonialsSection() {
         {/* Desktop: 3-col grid */}
         <div className="hidden md:grid md:grid-cols-3 gap-5 lg:gap-6">
           {displayReviews.slice(0, 3).map((review, i) => {
-            const productName = productNameById.get(review.product_id) ?? "benangbaju";
+            const productName = "benangbaju";
             return (
               <motion.article
                 key={review.id}
@@ -175,7 +173,7 @@ export default function ProductTestimonialsSection() {
             <AnimatePresence mode="wait">
               {displayReviews.slice(0, 3).map((review, i) => {
                 if (i !== activeIndex) return null;
-                const productName = productNameById.get(review.product_id) ?? "benangbaju";
+                const productName = "benangbaju";
                 return (
                   <motion.article
                     key={review.id}
@@ -233,11 +231,13 @@ export default function ProductTestimonialsSection() {
           className="flex flex-col sm:flex-row items-center justify-center gap-5 mt-12 md:mt-16 bg-white border border-stone-200/70 p-6 md:p-7 rounded-sm max-w-sm sm:max-w-none sm:w-fit mx-auto shadow-sm"
         >
           <div className="flex items-end gap-3">
-            <span className="text-[3.5rem] font-extralight text-brand-softblack leading-none tracking-tighter">4.9</span>
+            <span className="text-[3.5rem] font-extralight text-brand-softblack leading-none tracking-tighter">
+              {settings.brandStats.avgRating}
+            </span>
             <div className="mb-1.5">
               <div className="flex gap-0.5 mb-1">
                 {[1, 2, 3, 4, 5].map(s => (
-                  <svg key={s} className="w-4 h-4 text-brand-gold fill-current" viewBox="0 0 12 12">
+                  <svg key={s} className={`w-4 h-4 ${s <= Math.round(Number(settings.brandStats.avgRating)) ? "text-brand-gold fill-current" : "text-stone-200"}`} viewBox="0 0 12 12">
                     <path d="M6 0.5l1.545 3.13 3.455.502-2.5 2.437.59 3.44L6 8.38 2.91 10.01l.59-3.44L1 4.132l3.455-.502z" />
                   </svg>
                 ))}

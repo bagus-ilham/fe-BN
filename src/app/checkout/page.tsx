@@ -23,9 +23,12 @@ import type {
   CheckoutStepId,
   CheckoutFormData
 } from "@/types/checkout";
+import { createOrderForCheckout } from "@/lib/application/checkout/checkout-application-service";
 
 const CHECKOUT_BG = "#F9F7F2";
 const CHECKOUT_INK = "#1B2B22";
+const hasSelectedShipping = (isFreeShipping: boolean, apiShippingIDR: number, quoteType?: string) =>
+  isFreeShipping || apiShippingIDR >= 0 || quoteType === "local";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -77,7 +80,7 @@ export default function CheckoutPage() {
       items: cart.map((i) => ({
         id: i.id,
         name: i.name,
-        price: i.price,
+        price: i.base_price,
         quantity: i.quantity,
         category: i.isKit ? "Kit" : "Product",
       })),
@@ -92,9 +95,8 @@ export default function CheckoutPage() {
 
   const handleContinueFromFreight = useCallback(() => {
     const hasValidShipping =
-      isFreeShipping ||
-      (selectedShippingQuote &&
-        (apiShippingIDR >= 0 || selectedShippingQuote.type === "local"));
+      selectedShippingQuote &&
+      hasSelectedShipping(isFreeShipping, apiShippingIDR, selectedShippingQuote.type);
     if (!hasValidShipping) {
       showToast(
         "Masukkan kode pos dan pilih layanan pengiriman untuk melanjutkan.",
@@ -179,89 +181,61 @@ export default function CheckoutPage() {
 
   const handleFormSubmit = useCallback(
     async (data: CheckoutFormData) => {
-      const addr = data.address;
-      const fullName = data.fullName?.trim();
-      const emailVal = (data.email ?? "").trim();
-      
       const hasValidShipping =
-        isFreeShipping ||
-        (selectedShippingQuote && (apiShippingIDR >= 0 || selectedShippingQuote.type === "local"));
+        selectedShippingQuote &&
+        hasSelectedShipping(isFreeShipping, apiShippingIDR, selectedShippingQuote.type);
       
       if (!hasValidShipping) {
         showToast("Masukkan kode pos dan pilih layanan pengiriman.");
         return;
       }
 
-      const items = cart.map((item) => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        image: item.image,
-      }));
-
       setIsSubmitting(true);
-      /*
       try {
-        const result = await checkoutAction({
-          form: {
-            email: emailVal,
-            fullName,
-            nik: data.nik,
-            phone: data.phone,
-            address: {
-              zip: addr.zip.trim(),
-              street: addr.street.trim(),
-              number: addr.number.trim(),
-              complement: addr.complement?.trim(),
-              neighborhood: addr.neighborhood.trim(),
-              city: addr.city.trim(),
-              state: addr.state.trim(),
-            },
-          },
-          items,
-          paymentMethod: "midtrans",
+        const checkoutResult = await createOrderForCheckout({
+          cart,
           userId: user?.id ?? null,
+          form: data,
+          totalPrice,
           shippingAmount: apiShippingIDR,
-          selectedShippingOption: selectedShippingQuote
-            ? { id: selectedShippingQuote.id, name: selectedShippingQuote.name, type: selectedShippingQuote.type }
-            : null,
+          couponCode,
         });
 
-        if (!result.success) {
-          showToast(result.error, "error");
+        if (!checkoutResult.ok) {
+          showToast(checkoutResult.error, "error");
+          return;
+        }
+
+        const midtransRes = await fetch("/api/checkout/midtrans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(checkoutResult.data),
+        });
+
+        const midtransData = await midtransRes.json();
+
+        if (!midtransRes.ok) {
+          showToast(midtransData.error || "Gagal menghubungi gateway pembayaran", "error");
           return;
         }
 
         setPaymentPayload({
           provider: "midtrans",
-          orderId: result.data.orderId,
-          snapToken: result.data.snapToken,
-          snapRedirectUrl: result.data.snapRedirectUrl,
+          orderId: checkoutResult.data.orderId,
+          snapToken: midtransData.token,
+          snapRedirectUrl: midtransData.redirect_url,
         });
+        
         setView("payment");
+        showToast("Pesanan berhasil dibuat! Melanjutkan ke pembayaran.");
       } catch (e) {
         console.error(e);
-        showToast("Terjadi kesalahan. Silakan coba lagi.", "error");
+        showToast("Terjadi kesalahan sistem. Silakan coba lagi.", "error");
       } finally {
         setIsSubmitting(false);
       }
-      */
-      
-      // Simulação de Checkout bem-sucedido (Mockup Mode)
-      setTimeout(() => {
-        setPaymentPayload({
-          provider: "midtrans",
-          orderId: `mock-order-${Date.now()}`,
-          snapToken: "mock-snap-token",
-          snapRedirectUrl: "#mock-payment",
-        });
-        setView("payment");
-        setIsSubmitting(false);
-        showToast("Mock: Pesanan berhasil dibuat! Melanjutkan ke pembayaran.");
-      }, 1500);
     },
-    [cart, isFreeShipping, selectedShippingQuote, apiShippingIDR, showToast],
+    [cart, isFreeShipping, selectedShippingQuote, apiShippingIDR, showToast, couponCode, totalPrice, user?.id],
   );
 
   const handlePaymentSuccess = useCallback(

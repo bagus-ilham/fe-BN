@@ -120,24 +120,47 @@ export default function LoginPage() {
       setLoading(true);
       sessionStorage.setItem('login_processing', 'true');
       setError(null);
+      setShowEmailNotConfirmed(false);
 
+      try {
+        const { supabase } = await import("@/utils/supabase");
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password,
+        });
 
-
-      // Simulação de login bem-sucedido (Mockup Mode)
-      setTimeout(() => {
-        showToast("Mock: Berhasil masuk! Selamat datang kembali.");
-        sessionStorage.removeItem('login_processing');
-        const redirect = sessionStorage.getItem("redirect");
-        if (redirect) {
-          sessionStorage.removeItem("redirect");
-          router.push(redirect);
-        } else {
-          router.push("/");
+        if (authError) {
+          if (isEmailNotConfirmedError(authError)) {
+            setShowEmailNotConfirmed(true);
+            setError("Email Anda belum dikonfirmasi. Silakan cek kotak masuk Anda.");
+          } else {
+            setError(formatDatabaseError(authError));
+          }
+          setLoading(false);
+          sessionStorage.removeItem('login_processing');
+          return;
         }
+
+        if (data?.user) {
+          showToast("Selamat datang kembali!");
+          sessionStorage.removeItem('login_processing');
+          const redirect = sessionStorage.getItem("redirect");
+          if (redirect) {
+            sessionStorage.removeItem("redirect");
+            router.push(redirect);
+          } else {
+            router.push("/");
+          }
+          // Biarkan loading tetap true sampai navigasi selesai
+        }
+      } catch (err) {
+        logDatabaseError("Login process", err);
+        setError("Terjadi kesalahan sistem. Silakan coba lagi.");
         setLoading(false);
-      }, 1000);
+        sessionStorage.removeItem('login_processing');
+      }
     },
-    [loading, router, showToast],
+    [loading, email, password, router, showToast],
   );
 
   return (

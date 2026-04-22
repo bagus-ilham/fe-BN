@@ -1,5 +1,7 @@
-import { getSupabaseAdmin } from '@/utils/supabase';
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { verifyOrderByPaymentReference } from "@/lib/order-service";
+import { badRequest, internalError, ok } from "@/lib/http/api-response";
+import { API_ERROR_MESSAGES, ORDER_ERROR_MESSAGES, ORDER_MESSAGES } from "@/constants/api-messages";
 
 /**
  * API Route para verificar se um pedido foi criado usando order_id (Pagar.me), session_id ou payment_intent.
@@ -15,64 +17,23 @@ export async function GET(req: NextRequest) {
       searchParams.get("payment_intent");
 
     if (!sessionId) {
-      return NextResponse.json(
-        { error: "order_id, session_id ou payment_intent é obrigatório" },
-        { status: 400 },
-      );
+      return badRequest(ORDER_ERROR_MESSAGES.REFERENCE_REQUIRED);
     }
 
-    const supabase = getSupabaseAdmin();
-
-    // Buscar pedido por payment_order_id (Pagar.me order id, Stripe session id ou MP preference_id)
-    const { data: order, error } = await supabase
-      .from("orders")
-      .select("id, status, created_at, total_amount, customer_email")
-      .eq("payment_order_id", sessionId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Erro ao verificar pedido:", error);
-      return NextResponse.json(
-        { error: "Erro ao verificar pedido" },
-        { status: 500 },
-      );
+    const result = await verifyOrderByPaymentReference(sessionId);
+    if (!result) {
+      return internalError(ORDER_ERROR_MESSAGES.VERIFY_FAILED);
     }
-
-    if (order) {
-      // Buscar itens para analytics (purchase event)
-      const { data: items } = await supabase
-        .from("order_items")
-        .select("product_id, product_name, quantity, price")
-        .eq("order_id", order.id);
-
-      return NextResponse.json({
-        exists: true,
-        orderId: order.id,
-        status: order.status,
-        createdAt: order.created_at,
-        totalAmount: order.total_amount,
-        customerEmail: order.customer_email ?? null,
-        items:
-          items?.map((i) => ({
-            id: i.product_id,
-            name: i.product_name,
-            price: i.price,
-            quantity: i.quantity,
-          })) ?? [],
+    if (!result.exists) {
+      return ok({
+        exists: false,
+        message: ORDER_MESSAGES.NOT_PROCESSED,
       });
     }
-
-    // Pedido ainda não foi criado (webhook pode estar processando)
-    return NextResponse.json({
-      exists: false,
-      message: "Pedido ainda não foi processado",
-    });
+    return ok(result);
   } catch (error: unknown) {
     console.error("Erro na verificação de pedido:", error);
-    return NextResponse.json(
-      { error: "Erro interno do servidor" },
-      { status: 500 },
-    );
+    return internalError(API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR);
   }
 }
 

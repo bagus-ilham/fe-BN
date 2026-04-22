@@ -168,15 +168,28 @@ export default function UpdatePasswordPage() {
 
     setLoading(true);
 
-    // Simulação de atualização de senha (Mockup Mode)
-    setTimeout(() => {
+    setLoading(true);
+
+    try {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (error) throw error;
+
       setSuccess(true);
+      showToast("Kata sandi berhasil diperbarui!");
+    } catch (err: any) {
+      console.error("❌ Gagal update password:", err);
+      setError(err.message || "Gagal memperbarui kata sandi. Silakan coba lagi.");
+    } finally {
       setLoading(false);
-      showToast("Mock: Kata sandi berhasil diperbarui!");
-      setTimeout(() => {
-        router.push("/login?password-reset=true");
-      }, 1500);
-    }, 1000);
+    }
   };
 
   // Loading state saat memeriksa sesi

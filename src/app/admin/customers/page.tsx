@@ -1,3 +1,7 @@
+import Link from "next/link";
+import { getAdminCustomersOverviewPaged } from "@/lib/user-service";
+import AdminPagination from "@/components/admin/AdminPagination";
+import { buildAdminHref } from "@/lib/admin/build-admin-href";
 import { 
   Users, 
   Search, 
@@ -7,47 +11,54 @@ import {
   UserPlus,
   Download
 } from "lucide-react";
-import Link from "next/link";
 
-const customers = [
-  {
-    id: "cus_1",
-    name: "Andi Pratama",
-    email: "andi@example.com",
-    phone: "081234567890",
-    total_orders: 12,
-    total_spent: 4500000,
-    status: "active",
-    joined_at: "2024-01-15T10:00:00Z"
-  },
-  {
-    id: "cus_2",
-    name: "Siti Aminah",
-    email: "siti@example.com",
-    phone: "081298765432",
-    total_orders: 5,
-    total_spent: 1200000,
-    status: "active",
-    joined_at: "2024-02-20T10:00:00Z"
-  },
-  {
-    id: "cus_3",
-    name: "Budi Santoso",
-    email: "budi@example.com",
-    phone: "081311223344",
-    total_orders: 1,
-    total_spent: 199000,
-    status: "inactive",
-    joined_at: "2024-03-05T10:00:00Z"
-  }
-];
+type AdminCustomersPageProps = {
+  searchParams?: Promise<{
+    page?: string;
+    pageSize?: string;
+    q?: string;
+  }>;
+};
 
-export default function AdminCustomersPage() {
+function resolveInt(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
+}
+
+const basePath = "/admin/customers";
+
+export default async function AdminCustomersPage({ searchParams }: AdminCustomersPageProps) {
+  const params = searchParams ? await searchParams : undefined;
+  const page = Math.max(resolveInt(params?.page, 1), 1);
+  const pageSize = Math.min(Math.max(resolveInt(params?.pageSize, 20), 10), 100);
+  const q = params?.q?.trim() || "";
+  const paged = await getAdminCustomersOverviewPaged({ page, pageSize, q });
+  const normalizedCustomers = paged.data;
+  const total = paged.total;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const query = { page: safePage, pageSize, q };
+  const getSafeDate = (value?: string | null) => (value ? new Date(value) : null);
+
+  // Calculate real stats
+  const totalCustomers = total || 0;
+  const activeCustomers = normalizedCustomers.filter(c => c.loyalty_points?.[0]?.points > 0).length || 0;
+  const thisMonth = new Date();
+  thisMonth.setDate(1);
+  const newCustomersThisMonth =
+    normalizedCustomers.filter((c) => {
+      const createdAt = getSafeDate(c.created_at);
+      return createdAt ? createdAt >= thisMonth : false;
+    }).length || 0;
+  
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="surface-card border border-gray-100/80 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-brand-softblack/35">
+            Customer Insights
+          </p>
           <h2 className="text-2xl font-light text-brand-softblack tracking-tight">
             Manajemen Pelanggan
           </h2>
@@ -71,12 +82,24 @@ export default function AdminCustomersPage() {
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
-          { label: "Total Pelanggan", value: "1,284", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Pelanggan Aktif", value: "1,150", icon: Users, color: "text-green-600", bg: "bg-green-50" },
-          { label: "Pelanggan Baru (Bulan Ini)", value: "48", icon: UserPlus, color: "text-amber-600", bg: "bg-amber-50" },
-          { label: "Rata-rata Pesanan", value: "2.4", icon: Filter, color: "text-purple-600", bg: "bg-purple-50" }
+          { label: "Total Pelanggan", value: totalCustomers.toLocaleString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Pelanggan Loyal", value: activeCustomers.toLocaleString(), icon: Users, color: "text-green-600", bg: "bg-green-50" },
+          { label: "Baru (Bulan Ini)", value: newCustomersThisMonth.toLocaleString(), icon: UserPlus, color: "text-amber-600", bg: "bg-amber-50" },
+            {
+              label: "Rata-rata Poin",
+              value:
+                normalizedCustomers.length > 0
+                  ? Math.round(
+                      normalizedCustomers.reduce((acc, curr) => acc + (curr.loyalty_points?.[0]?.points || 0), 0) /
+                        normalizedCustomers.length
+                    )
+                  : 0,
+              icon: Filter,
+              color: "text-purple-600",
+              bg: "bg-purple-50",
+            }
         ].map((stat, idx) => (
-          <div key={idx} className="surface-card p-6 flex items-center gap-4">
+          <div key={idx} className="surface-card border border-gray-100/80 p-6 flex items-center gap-4">
             <div className={`p-3 ${stat.bg} ${stat.color} rounded-xl`}>
               <stat.icon size={20} />
             </div>
@@ -89,20 +112,26 @@ export default function AdminCustomersPage() {
       </div>
 
       {/* Table Section */}
-      <div className="surface-card overflow-hidden">
+      <div className="surface-card border border-gray-100/80 overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-brand-offwhite/30">
-           <div className="relative flex-1 max-w-md">
+           <form action="/admin/customers" method="get" className="relative flex-1 max-w-md">
+             {pageSize !== 20 && <input type="hidden" name="pageSize" value={String(pageSize)} />}
              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
              <input 
                type="text" 
+               name="q"
+               defaultValue={q}
                placeholder="Cari pelanggan berdasarkan nama atau email..."
                className="w-full pl-10 pr-4 py-2 bg-white border border-gray-100 text-xs focus:ring-1 focus:ring-brand-green/30 outline-none"
              />
-           </div>
-           <button type="button" className="flex items-center gap-2 px-4 py-2 text-[10px] uppercase tracking-widest text-brand-softblack/60 hover:text-brand-softblack transition-colors">
+           </form>
+           <Link
+             href={buildAdminHref(basePath, query, { page: 1, q: undefined })}
+             className="flex items-center gap-2 px-4 py-2 text-[10px] uppercase tracking-widest text-brand-softblack/60 hover:text-brand-softblack transition-colors"
+           >
              <Filter size={14} />
-             Filter
-           </button>
+             Reset
+           </Link>
         </div>
 
         <div className="overflow-x-auto">
@@ -118,17 +147,17 @@ export default function AdminCustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {customers.map((customer) => (
+              {normalizedCustomers?.map((customer) => (
                 <tr key={customer.id} className="hover:bg-brand-offwhite/20 transition-all duration-300 group">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-brand-offwhite flex items-center justify-center text-[10px] font-medium text-brand-softblack border border-gray-100">
-                        {customer.name.split(' ').map(n => n[0]).join('')}
+                        {(customer.full_name || 'A').split(' ').map((n: string) => n[0]).join('')}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-xs font-semibold text-brand-softblack">{customer.name}</span>
+                        <span className="text-xs font-semibold text-brand-softblack">{customer.full_name || "Anonim"}</span>
                         <span className="text-[10px] text-brand-softblack/30 mt-0.5">
-                          Bergabung {new Date(customer.joined_at).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}
+                          Bergabung {getSafeDate(customer.created_at)?.toLocaleDateString("id-ID", { month: "short", year: "numeric" }) || "-"}
                         </span>
                       </div>
                     </div>
@@ -143,18 +172,18 @@ export default function AdminCustomersPage() {
                     </div>
                   </td>
                   <td className="px-6 py-5 text-center text-xs text-brand-softblack">
-                    {customer.total_orders}
+                    {customer.orders_count || 0}
                   </td>
                   <td className="px-6 py-5 text-xs font-medium text-brand-softblack">
-                    Rp {customer.total_spent.toLocaleString('id-ID')}
+                    {customer.loyalty_points?.[0]?.points || 0} Pts
                   </td>
                   <td className="px-6 py-5">
                     <span className={`px-3 py-1 text-[9px] uppercase tracking-widest font-semibold border rounded-full ${
-                      customer.status === 'active' 
+                      customer.loyalty_points?.[0]?.tier === 'Platinum' 
                         ? "bg-brand-green/10 text-brand-green border-brand-green/20" 
                         : "bg-gray-50 text-gray-400 border-gray-100"
                     }`}>
-                      {customer.status}
+                      {customer.loyalty_points?.[0]?.tier || 'Bronze'}
                     </span>
                   </td>
                   <td className="px-6 py-5 text-right">
@@ -164,9 +193,18 @@ export default function AdminCustomersPage() {
                   </td>
                 </tr>
               ))}
+              {normalizedCustomers.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-20 text-center text-sm text-brand-softblack/40 italic">
+                    {q ? "Tidak ada pelanggan yang cocok dengan pencarian." : "Belum ada data pelanggan."}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+
+        <AdminPagination basePath="/admin/customers" page={safePage} pageSize={pageSize} total={total} query={{ q }} />
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { Share2 } from "lucide-react";
 
-export interface ShareButtonProps {
+interface ShareButtonProps {
   /** Título para navigator.share (ex.: nome do produto). */
   title?: string;
   /** Texto para navigator.share (ex.: descrição curta). */

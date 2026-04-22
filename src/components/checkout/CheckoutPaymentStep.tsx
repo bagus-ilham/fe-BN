@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { CheckoutPaymentPayload } from "@/types/checkout";
 
-export interface CheckoutPaymentStepProps {
+interface CheckoutPaymentStepProps {
   payload: CheckoutPaymentPayload;
   onSuccess: (id: string) => void;
   onError: (message: string) => void;

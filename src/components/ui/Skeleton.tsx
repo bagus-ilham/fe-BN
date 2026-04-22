@@ -5,7 +5,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(...inputs));
 }
 
-export interface SkeletonProps {
+interface SkeletonProps {
   className?: string;
   variant?: "text" | "circular" | "rectangular";
 }

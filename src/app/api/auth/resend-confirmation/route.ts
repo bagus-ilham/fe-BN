@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
+import { API_ERROR_MESSAGES, AUTH_ERROR_MESSAGES, AUTH_MESSAGES } from '@/constants/api-messages';
 
 /**
  * API Route para reenviar email de confirmação
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json(
-        { error: 'Email é obrigatório' },
+        { error: AUTH_ERROR_MESSAGES.EMAIL_REQUIRED },
         { status: 400 }
       );
     }
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       if (!resendError) {
         return NextResponse.json({
           success: true,
-          message: 'Email de confirmação reenviado. Verifique sua caixa de entrada e spam.',
+          message: AUTH_MESSAGES.RESEND_CONFIRMATION_RESENT,
         });
       }
 
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
       if (isRateLimit) {
         return NextResponse.json(
           { 
-            error: 'Muitas solicitações foram feitas em pouco tempo. Por favor, aguarde alguns minutos antes de tentar novamente. Isso ajuda a proteger nosso sistema contra abusos.',
+            error: AUTH_ERROR_MESSAGES.RESEND_RATE_LIMITED,
             rateLimit: true,
           },
           { status: 429 }
@@ -108,13 +109,13 @@ export async function POST(request: NextRequest) {
         // Retornar sucesso genérico para segurança (não expor se email está confirmado)
         return NextResponse.json({
           success: true,
-          message: 'Se o email estiver cadastrado e não confirmado, você receberá um email em breve. Verifique sua caixa de entrada e spam.',
+          message: AUTH_MESSAGES.RESEND_CONFIRMATION_GENERIC,
         });
       }
 
       // Outros erros
       return NextResponse.json(
-        { error: error.message || 'Erro ao reenviar email' },
+        { error: error.message || AUTH_ERROR_MESSAGES.RESEND_FAILED },
         { status: 400 }
       );
     }
@@ -122,12 +123,12 @@ export async function POST(request: NextRequest) {
     // Sucesso - email enviado
     return NextResponse.json({
       success: true,
-      message: 'Email de confirmação enviado. Verifique sua caixa de entrada e spam.',
+      message: AUTH_MESSAGES.RESEND_CONFIRMATION_SENT,
     });
   } catch (err: unknown) {
     console.error('Erro ao reenviar confirmação:', err);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR },
       { status: 500 }
     );
   }

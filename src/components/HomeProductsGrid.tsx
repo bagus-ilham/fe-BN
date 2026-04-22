@@ -3,13 +3,13 @@
 import { useRef, useState, useEffect, useMemo } from "react";
 import { motion, useInView, useReducedMotion } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
-import type { Product } from "@/constants/products";
+import { ProductWithExtras } from "@/types/database";
 
 import { ReviewSummary } from "@/types/review";
-import { InventoryStatus as InventoryItem } from "@/types/database";
+import { Inventory } from "@/types/database";
 
 interface HomeProductsGridProps {
-  products: Product[];
+  products: ProductWithExtras[];
 }
 
 export default function HomeProductsGrid({ products }: HomeProductsGridProps) {
@@ -19,7 +19,7 @@ export default function HomeProductsGrid({ products }: HomeProductsGridProps) {
   const [hasMounted, setHasMounted] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [reviewSummary, setReviewSummary] = useState<ReviewSummary[]>([]);
-  const [inventoryStatus, setInventoryStatus] = useState<InventoryItem[]>([]);
+  const [inventoryStatus, setInventoryStatus] = useState<Inventory[]>([]);
 
   useEffect(() => {
     /*
@@ -35,14 +35,12 @@ export default function HomeProductsGrid({ products }: HomeProductsGridProps) {
         if (Array.isArray(data)) {
           setInventoryStatus(
             data
-              .filter((d: { product_id?: string }) => d?.product_id)
+              .filter((d: any) => d?.variant_id)
               .map(
-                (d: {
-                  product_id: string;
-                  available_quantity?: number;
-                }) => ({
-                  product_id: d.product_id,
-                  available_quantity: Number(d.available_quantity) || 0,
+                (d: any) => ({
+                  ...d,
+                  variant_id: d.variant_id,
+                  available_quantity: (Number(d.stock_quantity) || 0) - (Number(d.reserved_quantity) || 0),
                 }),
               ),
           );
@@ -55,17 +53,17 @@ export default function HomeProductsGrid({ products }: HomeProductsGridProps) {
   const productsWithReviews = useMemo(() => {
     const byId = new Map(reviewSummary.map((s) => [s.product_id, s]));
     const invById = new Map(
-      inventoryStatus.map((i) => [i.product_id, i.available_quantity]),
+      inventoryStatus.map((i: any) => [i.variant_id, i.available_quantity]),
     );
     return products.map((p) => {
       const s = byId.get(p.id);
       const avail = invById.get(p.id);
       return {
         ...p,
-        rating: s?.rating,
-        reviews: s?.reviews,
-        availableQuantity: avail,
-      };
+        rating: s?.rating ?? 5,
+        reviews_count: s?.reviews,
+        available_quantity: avail,
+      } as ProductWithExtras;
     });
   }, [products, reviewSummary, inventoryStatus]);
 

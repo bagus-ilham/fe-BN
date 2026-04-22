@@ -1,11 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Product } from "@/constants/products";
+import { ProductWithExtras } from "@/types/database";
 import ProductCard from "./ProductCard";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface FlashSaleSectionProps {
-  products: Product[];
+  products: ProductWithExtras[];
   endDate: string;
 }
 

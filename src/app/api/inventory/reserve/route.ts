@@ -1,82 +1,43 @@
-import { NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/utils/supabase';
-import type { ReserveInventoryResponse } from '@/types/database';
-
-// ============================================================================
-// API: RESERVAR ESTOQUE (PRÉ-CHECKOUT)
-// ============================================================================
-// Rota: POST /api/inventory/reserve
-// Reserva estoque temporariamente durante o checkout (expira em 1 hora)
-// ============================================================================
-
-interface ReserveInventoryRequest {
-  product_id: string;
-  quantity: number;
-  payment_order_id: string;
-  customer_email?: string;
-  user_id?: string;
-}
+import { badRequest, conflict, internalError, ok } from "@/lib/http/api-response";
+import {
+  ReserveInventoryRequest,
+  ReserveInventoryResponse,
+} from '@/types/contracts/inventory';
+import { reserveInventoryInDatabase } from '@/lib/inventory-service';
+import { API_ERROR_MESSAGES, INVENTORY_ERROR_MESSAGES, requiredFieldsMessage } from "@/constants/api-messages";
 
 /**
  * POST /api/inventory/reserve
- * Body: { product_id, quantity, payment_order_id, customer_email?, user_id? }
+ * Body: { variant_id, quantity, payment_order_id, customer_email? }
  */
 export async function POST(req: Request) {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
     const body: ReserveInventoryRequest = await req.json();
 
     // Validações
-    if (!body.product_id || !body.quantity || !body.payment_order_id) {
-      return NextResponse.json(
-        { error: 'Missing required fields: product_id, quantity, payment_order_id' },
-        { status: 400 }
-      );
+    if (!body.variant_id || !body.quantity || !body.payment_order_id) {
+      return badRequest(requiredFieldsMessage(["variant_id", "quantity", "payment_order_id"]));
     }
 
     if (body.quantity <= 0) {
-      return NextResponse.json(
-        { error: 'Quantity must be greater than 0' },
-        { status: 400 }
-      );
+      return badRequest(INVENTORY_ERROR_MESSAGES.INVALID_QUANTITY);
     }
 
-    // Chamar função do PostgreSQL para reservar estoque
-    const { data, error } = await supabaseAdmin.rpc('reserve_inventory', {
-      p_product_id: body.product_id,
-      p_quantity: body.quantity,
-      p_payment_order_id: body.payment_order_id,
-      p_customer_email: body.customer_email || null,
-      p_user_id: body.user_id || null,
-    });
-
-    if (error) {
-      console.error('Error reserving inventory:', error);
-      return NextResponse.json(
-        { error: 'Failed to reserve inventory', details: error.message },
-        { status: 500 }
-      );
+    const result = await reserveInventoryInDatabase(body);
+    if (!result.ok) {
+      return internalError(INVENTORY_ERROR_MESSAGES.RESERVATION_FAILED, result.error);
     }
 
-    const response = data as ReserveInventoryResponse;
+    const response = result.data as ReserveInventoryResponse;
 
     // Se a reserva falhou (estoque insuficiente)
     if (!response.success) {
-      return NextResponse.json(
-        {
-          error: response.error,
-          available: response.available,
-          requested: response.requested,
-        },
-        { status: 409 } // 409 Conflict
-      );
+      return conflict(response.error);
     }
 
-    // Sucesso
-    return NextResponse.json({
+    return ok({
       success: true,
       reservation_id: response.reservation_id,
-      expires_at: response.expires_at,
     });
 
   } catch (error: unknown) {
@@ -89,11 +50,8 @@ export async function POST(req: Request) {
     
     const errorMessage = error instanceof Error 
       ? error.message 
-      : 'Internal server error';
+      : API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return internalError(errorMessage);
   }
 }

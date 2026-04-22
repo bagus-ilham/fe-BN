@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { PRODUCTS } from "@/constants/products";
+import { useState, useMemo, useEffect } from "react";
+import { listProductsByFilter } from "@/lib/application/products/product-query-service";
 import HomeProductsGrid from "@/components/HomeProductsGrid";
 import TextReveal from "@/components/ui/text-reveal";
 import CollectionSidebar from "@/components/shop/CollectionSidebar";
@@ -9,40 +9,53 @@ import { SlidersHorizontal, LayoutGrid } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function CollectionsPage() {
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("Semua Produk");
   const [collectionFilter, setCollectionFilter] = useState("Semua Koleksi");
   const [sort, setSort] = useState("newest");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    async function fetchProducts() {
+      setLoading(true);
+      const data = await listProductsByFilter({ is_active: true });
+      setProducts(data);
+      setLoading(false);
+    }
+
+    fetchProducts();
+  }, []);
+
   const filteredProducts = useMemo(() => {
-    let result = [...PRODUCTS];
+    let result = [...products];
 
     if (category !== "Semua Produk") {
-      result = result.filter(p => p.category === category);
+      result = result.filter(p => p.category_id === category || p.category === category);
     }
 
     if (collectionFilter !== "Semua Koleksi") {
-      result = result.filter(p => p.collection === collectionFilter);
+      result = result.filter(p => p.collection_id === collectionFilter || p.collection === collectionFilter);
     }
 
     switch (sort) {
       case "price-asc":
-        result.sort((a, b) => a.price - b.price);
+        result.sort((a, b) => (a.base_price || a.price) - (b.base_price || b.price));
         break;
       case "price-desc":
-        result.sort((a, b) => b.price - a.price);
+        result.sort((a, b) => (b.base_price || b.price) - (a.base_price || a.price));
         break;
       case "name-asc":
         result.sort((a, b) => a.name.localeCompare(b.name));
         break;
       case "newest":
       default:
-        result.reverse();
+        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         break;
     }
 
     return result;
-  }, [category, collectionFilter, sort]);
+  }, [products, category, collectionFilter, sort]);
 
   return (
     <main className="bg-brand-offwhite min-h-screen pt-24 pb-20">

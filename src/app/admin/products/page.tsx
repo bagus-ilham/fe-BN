@@ -8,34 +8,76 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import type { ProductDB, ProductWithInventory } from "@/types/database";
-import { PRODUCTS } from "@/constants/products";
+import type { ProductRow } from "@/types/database";
+import { formatPrice } from "@/utils/format";
+import AdminPagination from "@/components/admin/AdminPagination";
+import { buildAdminHref } from "@/lib/admin/build-admin-href";
 
-// Using ProductDB from @/types/database
+// Extended type for products with nested inventory data
+interface ProductWithInventory extends ProductRow {
+  category: string;
+  inventory?: { stock_quantity: number }[];
+}
+import { listProductsForAdminPaged } from "@/lib/application/products/product-admin-service";
 
-const products = PRODUCTS.map((p) => ({
-  id: p.id,
-  name: p.name,
-  category: p.category,
-  price: p.price,
-  image_url: p.image,
-  is_active: p.soldOut ? false : true,
-  inventory: [{ stock_quantity: p.availableQuantity || 25 }]
-}));
+type AdminProductsPageProps = {
+  searchParams?: Promise<{
+    page?: string;
+    pageSize?: string;
+    q?: string;
+    status?: string;
+  }>;
+};
 
-export default async function AdminProductsPage() {
+function resolveInt(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
+}
+
+function resolveStatus(value: string | undefined): "active" | "draft" | undefined {
+  if (value === "active" || value === "draft") return value;
+  return undefined;
+}
+
+const basePath = "/admin/products";
+
+export default async function AdminProductsPage({ searchParams }: AdminProductsPageProps) {
+  const params = searchParams ? await searchParams : undefined;
+  const page = Math.max(resolveInt(params?.page, 1), 1);
+  const pageSize = Math.min(Math.max(resolveInt(params?.pageSize, 20), 10), 100);
+  const q = params?.q?.trim() || "";
+  const status = resolveStatus(params?.status);
+  const isActive = status === "active" ? true : status === "draft" ? false : undefined;
+
+  const paged = await listProductsForAdminPaged({
+    page,
+    pageSize,
+    q,
+    isActive,
+  });
+  const products = paged.data;
+  const total = paged.total;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const query = { page: safePage, pageSize, q, status };
+  const activeProducts = (products as ProductWithInventory[])?.filter((p) => p.is_active).length || 0;
+  const lowStockProducts =
+    (products as ProductWithInventory[])?.filter((p) => (p.inventory?.[0]?.stock_quantity ?? 0) <= 5).length || 0;
   
 
   return (
     <div className="space-y-8">
       {/* Header Action */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="surface-card border border-gray-100/80 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-brand-softblack/35">
+            Product Catalog
+          </p>
           <h2 className="text-2xl font-light text-brand-softblack tracking-tight">
             Manajemen Produk
           </h2>
           <p className="text-xs text-brand-softblack/40 uppercase tracking-widest mt-1">
-            Total {products?.length || 0} Produk Terdaftar
+            Menampilkan {products?.length || 0} Produk • {activeProducts} Aktif • {lowStockProducts} Low Stock (halaman ini)
           </p>
         </div>
         
@@ -49,23 +91,52 @@ export default async function AdminProductsPage() {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="surface-card p-4 flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-1 w-full">
+      <div className="surface-card border border-gray-100/80 p-4 flex flex-col md:flex-row gap-4 items-center">
+        <form action="/admin/products" method="get" className="relative flex-1 w-full">
+          {status && <input type="hidden" name="status" value={status} />}
+          {pageSize !== 20 && <input type="hidden" name="pageSize" value={String(pageSize)} />}
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
           <input 
             type="text" 
-            placeholder="Cari nama produk atau SKU..."
+            name="q"
+            defaultValue={q}
+            placeholder="Cari nama produk atau ID..."
             className="w-full pl-12 pr-4 py-3 bg-brand-offwhite/50 border-none text-sm focus:ring-1 focus:ring-brand-green/30 outline-none"
           />
+        </form>
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <Link
+            href={buildAdminHref(basePath, query, { page: 1, status: "active" })}
+            className={`flex items-center gap-2 px-4 py-3 border text-xs uppercase tracking-widest transition-colors ${
+              status === "active"
+                ? "bg-brand-softblack text-white border-brand-softblack"
+                : "text-brand-softblack/60 border-gray-100 hover:bg-brand-offwhite"
+            }`}
+          >
+            <Filter size={16} />
+            Aktif
+          </Link>
+          <Link
+            href={buildAdminHref(basePath, query, { page: 1, status: "draft" })}
+            className={`px-4 py-3 border text-xs uppercase tracking-widest transition-colors ${
+              status === "draft"
+                ? "bg-brand-softblack text-white border-brand-softblack"
+                : "text-brand-softblack/60 border-gray-100 hover:bg-brand-offwhite"
+            }`}
+          >
+            Draft
+          </Link>
+          <Link
+            href={buildAdminHref(basePath, query, { page: 1, status: undefined })}
+            className="px-4 py-3 border border-gray-100 text-xs uppercase tracking-widest text-brand-softblack/60 hover:bg-brand-offwhite transition-colors"
+          >
+            Reset
+          </Link>
         </div>
-        <button type="button" className="flex items-center gap-2 px-6 py-3 border border-gray-100 text-xs uppercase tracking-widest text-brand-softblack/60 hover:bg-brand-offwhite transition-colors">
-          <Filter size={16} />
-          Filter
-        </button>
       </div>
 
       {/* Products Table */}
-      <div className="surface-card overflow-hidden">
+      <div className="surface-card border border-gray-100/80 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -108,7 +179,7 @@ export default async function AdminProductsPage() {
                       {product.category}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-brand-softblack">
-                      Rp {product.price.toLocaleString('id-ID')}
+                      {formatPrice(product.base_price)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -151,13 +222,26 @@ export default async function AdminProductsPage() {
               {(!products || products.length === 0) && (
                 <tr>
                   <td colSpan={6} className="px-6 py-20 text-center">
-                    <p className="text-sm font-light text-brand-softblack/40">Belum ada produk terdaftar.</p>
+                    <p className="text-sm font-light text-brand-softblack/40">
+                      {q || status ? "Tidak ada produk yang cocok dengan filter saat ini." : "Belum ada produk terdaftar."}
+                    </p>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        <AdminPagination
+          basePath="/admin/products"
+          page={safePage}
+          pageSize={pageSize}
+          total={total}
+          query={{
+            q,
+            status,
+          }}
+        />
       </div>
     </div>
   );

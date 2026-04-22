@@ -10,31 +10,38 @@ import BrandStatsSection from "@/components/BrandStatsSection";
 import CollectionBanner from "@/components/CollectionBanner";
 import RunningCarousel from "@/components/ui/RunningCarousel";
 import FlashSaleSection from "@/components/FlashSaleSection";
-import { Product } from "@/constants/products";
+import { ProductWithExtras } from "@/types/database";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 
 interface HomepageClientProps {
-  products: Product[];
+  products: ProductWithExtras[];
+  flashSale?: any;
 }
 
-export default function HomepageClient({ products }: HomepageClientProps) {
+export default function HomepageClient({ products, flashSale }: HomepageClientProps) {
   const { settings } = useSiteSettings();
 
   const newProducts = products.filter((p) => p.badge === "new").slice(0, 3);
   const bestSellerProducts = products.filter((p) => p.badge === "bestseller").slice(0, 3);
-  const essentialsProducts = products.filter((p) => p.category === "Atasan").slice(0, 3);
+  const essentialsProducts = products.filter((p) => p.category_id === "Atasan").slice(0, 3);
   const bundlesProducts = products.filter((p) => p.badge === "kit").slice(0, 3);
-  const saleProducts = products.filter((p) => p.oldPrice && p.oldPrice > p.price);
-  const flashSaleEndDate = "2024-12-31T23:59:59Z";
+  
+  // Use products from flash sale items if available, otherwise fall back to products with oldPrice
+  const flashSaleProducts = flashSale?.flash_sale_items?.map((item: any) => ({
+    ...item.products,
+    base_price: item.sale_price,
+    oldPrice: item.products.base_price
+  })) || products.filter((p) => p.oldPrice && p.oldPrice > (p.base_price || 0));
+
+  const flashSaleEndDate = flashSale?.end_at || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).toISOString();
 
   return (
     <main className="bg-brand-offwhite">
       {/* ── MAIN HERO ── */}
       <HomeHero />
-
       {/* ── FLASH SALE ── */}
-      {saleProducts.length > 0 && (
-        <FlashSaleSection products={saleProducts} endDate={flashSaleEndDate} />
+      {flashSaleProducts.length > 0 && (
+        <FlashSaleSection products={flashSaleProducts} endDate={flashSaleEndDate} />
       )}
 
       {/* ── MARQUEE ── */}

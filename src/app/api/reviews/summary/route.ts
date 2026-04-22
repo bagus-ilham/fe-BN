@@ -1,5 +1,6 @@
-import { getSupabaseAdmin } from '@/utils/supabase';
+import { getApprovedReviewsSummary } from "@/lib/review-service";
 import { NextResponse } from "next/server";
+import { API_ERROR_MESSAGES, REVIEWS_ERROR_MESSAGES } from "@/constants/api-messages";
 
 /**
  * GET /api/reviews/summary
@@ -8,49 +9,19 @@ import { NextResponse } from "next/server";
  */
 export async function GET() {
   try {
-    const supabase = getSupabaseAdmin();
-
-    const { data, error } = await supabase
-      .from("reviews")
-      .select("product_id, rating")
-      .eq("status", "approved");
-
-    if (error) {
-      console.error("[REVIEWS SUMMARY] Error:", error);
+    const summary = await getApprovedReviewsSummary();
+    if (summary === null) {
       return NextResponse.json(
-        { error: "Failed to fetch reviews summary" },
+        { error: REVIEWS_ERROR_MESSAGES.FETCH_SUMMARY_FAILED },
         { status: 500 }
       );
     }
-
-    const byProduct = new Map<
-      string,
-      { sum: number; count: number }
-    >();
-
-    for (const row of data ?? []) {
-      const existing = byProduct.get(row.product_id);
-      if (existing) {
-        existing.sum += row.rating;
-        existing.count += 1;
-      } else {
-        byProduct.set(row.product_id, { sum: row.rating, count: 1 });
-      }
-    }
-
-    const summary = Array.from(byProduct.entries()).map(
-      ([product_id, { sum, count }]) => ({
-        product_id,
-        rating: Math.round((sum / count) * 10) / 10,
-        reviews: count,
-      })
-    );
 
     return NextResponse.json(summary);
   } catch (e) {
     console.error("[REVIEWS SUMMARY] Error:", e);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR },
       { status: 500 }
     );
   }

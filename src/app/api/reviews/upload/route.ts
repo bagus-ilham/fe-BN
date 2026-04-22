@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '@/utils/supabase';
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getClientIp } from "@/utils/rate-limit";
+import { API_ERROR_MESSAGES, REVIEWS_ERROR_MESSAGES } from "@/constants/api-messages";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
   });
   if (!rl.success) {
     return NextResponse.json(
-      { error: "Muitas tentativas. Aguarde um momento." },
+      { error: REVIEWS_ERROR_MESSAGES.UPLOAD_TOO_MANY_ATTEMPTS },
       {
         status: 429,
         headers: {
@@ -40,23 +41,23 @@ export async function POST(req: NextRequest) {
     const productId = formData.get("product_id");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Imagem inválida." }, { status: 400 });
+      return NextResponse.json({ error: REVIEWS_ERROR_MESSAGES.INVALID_IMAGE }, { status: 400 });
     }
     if (!productId || typeof productId !== "string") {
       return NextResponse.json(
-        { error: "product_id inválido." },
+        { error: REVIEWS_ERROR_MESSAGES.INVALID_PRODUCT_ID },
         { status: 400 },
       );
     }
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: "Formato inválido. Use JPG, PNG ou WEBP." },
+        { error: REVIEWS_ERROR_MESSAGES.INVALID_IMAGE_FORMAT },
         { status: 400 },
       );
     }
     if (file.size > MAX_SIZE_BYTES) {
       return NextResponse.json(
-        { error: "Imagem muito grande. Máximo 3 MB." },
+        { error: REVIEWS_ERROR_MESSAGES.IMAGE_TOO_LARGE },
         { status: 400 },
       );
     }
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     if (uploadError) {
       console.error("[REVIEW UPLOAD] Storage error:", uploadError);
       return NextResponse.json(
-        { error: "Erro ao fazer upload da imagem." },
+        { error: REVIEWS_ERROR_MESSAGES.IMAGE_UPLOAD_FAILED },
         { status: 500 },
       );
     }
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: publicUrl });
   } catch (err: unknown) {
     console.error("[REVIEW UPLOAD] Error:", err instanceof Error ? err.message : err);
-    return NextResponse.json({ error: "Erro interno." }, { status: 500 });
+    return NextResponse.json({ error: API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR }, { status: 500 });
   }
 }
 

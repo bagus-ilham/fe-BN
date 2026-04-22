@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { API_ERROR_MESSAGES, ORDER_ERROR_MESSAGES } from "@/constants/api-messages";
 
 interface OrderConfirmationBody {
   customerEmail: string;
@@ -25,14 +26,14 @@ export async function POST(req: NextRequest) {
 
     if (!data.customerEmail) {
       return NextResponse.json(
-        { error: "Customer email is required" },
+        { error: ORDER_ERROR_MESSAGES.CUSTOMER_EMAIL_REQUIRED },
         { status: 400 },
       );
     }
 
     if (!data.orderId || !data.items || data.items.length === 0) {
       return NextResponse.json(
-        { error: "Order ID and items are required" },
+        { error: ORDER_ERROR_MESSAGES.ORDER_ID_AND_ITEMS_REQUIRED },
         { status: 400 },
       );
     }
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     if (!result.success) {
       return NextResponse.json(
-        { error: result.error ?? "Failed to send email" },
+        { error: result.error ?? ORDER_ERROR_MESSAGES.SEND_CONFIRMATION_FAILED },
         { status: 500 },
       );
     }
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
       messageId: result.messageId,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal server error";
+    const message = err instanceof Error ? err.message : API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
     console.error("[send-order-confirmation] Error:", err);
     return NextResponse.json({ error: message }, { status: 500 });
   }

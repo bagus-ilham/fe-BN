@@ -2,17 +2,6 @@
  * Types for benangbaju — Midtrans as unique gateway.
  */
 
-/** Item keranjang yang dikirim ke API checkout */
-export interface CheckoutCartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image?: string;
-  kitProducts?: string[];
-  isKit?: boolean;
-}
-
 /** Payload untuk langkah pembayaran - Midtrans Snap */
 export type CheckoutPaymentPayload = {
   provider: "midtrans";

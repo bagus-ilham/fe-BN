@@ -7,19 +7,20 @@ import { getPublishedCMSPageBySlug } from "@/lib/cms-service";
 import CMSBlocksRenderer from "@/components/cms/CMSBlocksRenderer";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { CmsPage, CmsBlock } from "@/types/database";
 
 export default function AboutPage() {
   const { settings } = useSiteSettings();
-  const [cmsPage, setCmsPage] = useState<any>(null);
+  const [cmsPage, setCmsPage] = useState<CmsPage | null>(null);
 
   useEffect(() => {
     getPublishedCMSPageBySlug("about").then(setCmsPage);
   }, []);
   
-  if (cmsPage && cmsPage.blocks.length > 0) {
+  if (cmsPage && (cmsPage.blocks as any[])?.length > 0) {
     return (
       <main className="bg-brand-offwhite page-shell">
-        <CMSBlocksRenderer blocks={cmsPage.blocks} />
+        <CMSBlocksRenderer blocks={cmsPage.blocks as unknown as CmsBlock[]} />
       </main>
     );
   }

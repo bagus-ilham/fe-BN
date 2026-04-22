@@ -1,23 +1,24 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Mail, Phone, MapPin, Clock, MessageCircle } from "lucide-react";
 import { getPublishedCMSPageBySlug } from "@/lib/cms-service";
 import CMSBlocksRenderer from "@/components/cms/CMSBlocksRenderer";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
-import { useEffect, useState } from "react";
+import { CmsPage, CmsBlock } from "@/types/database";
 
 export default function ContactPage() {
   const { settings } = useSiteSettings();
-  const [cmsPage, setCmsPage] = useState<any>(null);
+  const [cmsPage, setCmsPage] = useState<CmsPage | null>(null);
 
   useEffect(() => {
     getPublishedCMSPageBySlug("contact").then(setCmsPage);
   }, []);
   
-  if (cmsPage && cmsPage.blocks.length > 0) {
+  if (cmsPage && (cmsPage.blocks as any[])?.length > 0) {
     return (
       <main className="bg-brand-offwhite page-shell">
-        <CMSBlocksRenderer blocks={cmsPage.blocks} />
+        <CMSBlocksRenderer blocks={cmsPage.blocks as unknown as CmsBlock[]} />
       </main>
     );
   }

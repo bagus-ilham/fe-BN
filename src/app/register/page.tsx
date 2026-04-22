@@ -69,12 +69,35 @@ export default function RegisterPage() {
 
 
 
-    // Simulação de registro bem-sucedido (Mockup Mode)
-    setTimeout(() => {
-      setSuccess(true);
+    try {
+      const { supabase } = await import("@/utils/supabase");
+      const { data, error: authError } = await supabase.auth.signUp({
+        email: formData.email.trim(),
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.full_name.trim(),
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (authError) {
+        setError(formatDatabaseError(authError));
+        setLoading(false);
+        return;
+      }
+
+      if (data?.user) {
+        setSuccess(true);
+        setLoading(false);
+        showToast("Akun berhasil dibuat! Silakan cek email Anda untuk konfirmasi.");
+      }
+    } catch (err) {
+      logDatabaseError("Registration process", err);
+      setError("Terjadi kesalahan sistem. Silakan coba lagi.");
       setLoading(false);
-      showToast("Mock: Akun berhasil dibuat! Silakan cek email Anda untuk konfirmasi.");
-    }, 1500);
+    }
   };
 
   const handleResendEmail = async () => {

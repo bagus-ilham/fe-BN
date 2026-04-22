@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, use } from "react";
-import { PRODUCTS } from "@/constants/products";
+import { listProductsByFilter } from "@/lib/application/products/product-query-service";
 import HomeProductsGrid from "@/components/HomeProductsGrid";
 import TextReveal from "@/components/ui/text-reveal";
 import CollectionSidebar from "@/components/shop/CollectionSidebar";
@@ -26,21 +26,32 @@ const slugMapping: Record<string, string> = {
 
 export default function CollectionSlugPage({ params }: CollectionPageProps) {
   const { slug } = use(params);
+  return <CollectionSlugContent key={slug} slug={slug} />;
+}
+
+function CollectionSlugContent({ slug }: { slug: string }) {
   const initialCategory = slugMapping[slug] || "Semua Produk";
+  
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState(initialCategory);
   const [collection, setCollection] = useState("Semua Koleksi");
   const [sort, setSort] = useState("newest");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const [prevSlug, setPrevSlug] = useState(slug);
-  if (slug !== prevSlug) {
-    setPrevSlug(slug);
-    setCategory(initialCategory);
-    setCollection("Semua Koleksi");
-  }
+  useEffect(() => {
+    async function fetchProducts() {
+      setLoading(true);
+      const data = await listProductsByFilter({ is_active: true });
+      setProducts(data);
+      setLoading(false);
+    }
+
+    fetchProducts();
+  }, []);
 
   const filteredProducts = useMemo(() => {
-    let result = [...PRODUCTS];
+    let result = [...products];
 
     // Handle special slugs or categories
     if (slug === "best-seller") {
@@ -48,39 +59,39 @@ export default function CollectionSlugPage({ params }: CollectionPageProps) {
     } else if (slug === "new-in") {
       result = result.filter(p => p.badge === "new");
     } else if (slug === "sale") {
-      result = result.filter(p => p.oldPrice && p.oldPrice > p.price);
+      result = result.filter(p => (p.oldPrice || 0) > (p.base_price || p.price || 0));
     } else {
       if (category !== "Semua Produk") {
-        result = result.filter(p => p.category === category);
+        result = result.filter(p => p.category_id === category || p.category === category);
       } else if (slugMapping[slug]) {
-        result = result.filter(p => p.category === slugMapping[slug]);
+        result = result.filter(p => p.category_id === slugMapping[slug] || p.category === slugMapping[slug]);
       }
 
       // Filter by collection if selected
       if (collection !== "Semua Koleksi") {
-        result = result.filter(p => p.collection === collection);
+        result = result.filter(p => p.collection_id === collection || p.collection === collection);
       }
     }
 
     // Sort
     switch (sort) {
       case "price-asc":
-        result.sort((a, b) => a.price - b.price);
+        result.sort((a, b) => (a.base_price || a.price) - (b.base_price || b.price));
         break;
       case "price-desc":
-        result.sort((a, b) => b.price - a.price);
+        result.sort((a, b) => (b.base_price || b.price) - (a.base_price || a.price));
         break;
       case "name-asc":
         result.sort((a, b) => a.name.localeCompare(b.name));
         break;
       case "newest":
       default:
-        result.reverse();
+        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         break;
     }
 
     return result;
-  }, [category, collection, sort, slug]);
+  }, [products, category, collection, sort, slug]);
 
   const displayTitle = initialCategory !== "Semua Produk" ? initialCategory : (slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " "));
 

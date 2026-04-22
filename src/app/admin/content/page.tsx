@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FileText, PencilLine } from "lucide-react";
 import { listCMSPagesForAdmin } from "@/lib/cms-service";
-import type { CMSPage } from "@/types/database";
+import type { CmsPage } from "@/types/database";
 
 export default async function AdminContentPage() {
   const pages = await listCMSPagesForAdmin();
@@ -19,7 +19,7 @@ export default async function AdminContentPage() {
 
       <div className="surface-card overflow-hidden">
         <div className="divide-y divide-brand-softblack/5">
-          {pages.map((page: CMSPage) => (
+          {pages.map((page: CmsPage) => (
             <div
               key={page.slug}
               className="px-6 py-4 flex items-center justify-between gap-4"

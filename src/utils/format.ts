@@ -8,27 +8,6 @@ export function formatPrice(price: number): string {
 }
 
 /**
- * Memformat jumlah unit terjual (social proof)
- * Ex.: 1247 → "1.247"
- */
-export function formatUnitsSold(count: number): string {
-  return count.toLocaleString('id-ID');
-}
-
-/**
- * Memformat unit terjual untuk highlight (social proof)
- * Ex.: 40 → "40+", 32 → "30+", 20 → "20+", 15 → "15"
- */
-export function formatUnitsSoldForDisplay(count: number): string {
-  if (count >= 100) return '100+';
-  if (count >= 50) return '50+';
-  if (count >= 40) return '40+';
-  if (count >= 30) return '30+';
-  if (count >= 20) return '20+';
-  return count.toLocaleString('id-ID');
-}
-
-/**
  * Memformat nomor telepon Indonesia
  * Menerima nomor dengan atau tanpa kode negara (+62)
  * Format: (0XX) XXXXX-XXXX atau +62 XX XXXXX-XXXX

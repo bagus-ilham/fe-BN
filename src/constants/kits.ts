@@ -1,6 +1,3 @@
-/** Dress Batik Modern product ID (prod_1) — referensi untuk integrasi. */
-export const GLOW_PRODUCT_ID = "prod_1";
-
 export interface Kit {
   id: string;
   name: string;

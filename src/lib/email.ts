@@ -11,13 +11,36 @@ const BACKGROUND = "#F9F7F2";
 const TEXT = "#1B2B22";
 const BORDER = "rgba(27,43,34,0.12)";
 
-function getResendClient(): any {
-  // Use a dummy client for mockup mode
-  return {
-    emails: {
-      send: async () => ({ data: { id: "mock-email-id" }, error: null })
-    }
+type EmailSendResult = {
+  data?: { id?: string | null } | null;
+  error?: { message?: string } | null;
+};
+
+type EmailClient = {
+  emails: {
+    send: (params: {
+      from: string;
+      to: string;
+      subject: string;
+      html: string;
+    }) => Promise<EmailSendResult>;
   };
+};
+
+function getResendClient(): EmailClient {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || apiKey === "re_123456789") {
+    // Fallback to mock if API key is missing or is the placeholder
+    return {
+      emails: {
+        send: async () => {
+          console.log("[MOCK EMAIL] API Key missing, simulating success");
+          return { data: { id: "mock-email-id" }, error: null };
+        }
+      }
+    };
+  }
+  return new Resend(apiKey) as unknown as EmailClient;
 }
 
 /** Format harga Rupiah (Rp 299.000) */
@@ -61,8 +84,89 @@ export interface SendOrderConfirmationParams {
 }
 
 function generateOrderConfirmationHtml(params: SendOrderConfirmationParams): string {
-  // Logic remains for previewing or template work
-  return "MOCK_HTML";
+  const shortId = params.orderId.slice(0, 8).toUpperCase();
+  const siteUrl = params.siteUrl ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://benangbaju.com";
+  
+  const itemsHtml = params.items.map(item => `
+    <tr>
+      <td style="padding:12px 0;border-bottom:1px solid ${BORDER};">
+        <p style="margin:0;font-size:14px;font-weight:500;">${escapeHtml(item.product_name)}</p>
+        <p style="margin:4px 0 0 0;font-size:12px;opacity:0.6;">${item.quantity} x ${formatPrice(item.price)}</p>
+      </td>
+      <td style="padding:12px 0;text-align:right;border-bottom:1px solid ${BORDER};vertical-align:top;">
+        <p style="margin:0;font-size:14px;font-weight:500;">${formatPrice(item.price * item.quantity)}</p>
+      </td>
+    </tr>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="id-ID">
+<head>
+  <meta charset="UTF-8">
+  <title>Konfirmasi Pesanan #${shortId} — benangbaju</title>
+</head>
+<body style="margin:0;padding:0;font-family:sans-serif;background-color:${BACKGROUND};color:${TEXT};">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background-color:${BACKGROUND};border:1px solid ${BORDER};">
+        <tr>
+          <td style="padding:32px 40px;text-align:center;border-bottom:1px solid ${BORDER};">
+            <h1 style="margin:0;font-size:22px;font-weight:300;letter-spacing:0.1em;text-transform:uppercase;color:${TEXT};">benangbaju</h1>
+            <p style="margin:12px 0 0 0;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.7;">Konfirmasi Pesanan</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px 40px;">
+            <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;">Halo, ${escapeHtml(params.customerName?.split(" ")[0] ?? "Pelanggan")}.</p>
+            <p style="margin:0 0 28px 0;font-size:15px;line-height:1.6;">Terima kasih telah berbelanja di benangbaju. Pesanan Anda <strong>#${shortId}</strong> telah kami terima dan sedang diproses.</p>
+            
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;font-size:10px;text-transform:uppercase;tracking:0.1em;opacity:0.5;padding-bottom:8px;">Produk</th>
+                  <th style="text-align:right;font-size:10px;text-transform:uppercase;tracking:0.1em;opacity:0.5;padding-bottom:8px;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td style="padding:16px 0 8px 0;font-size:13px;opacity:0.7;">Subtotal</td>
+                  <td style="padding:16px 0 8px 0;font-size:13px;text-align:right;">${formatPrice(params.totalAmount)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;font-size:15px;font-weight:600;">Total Pembayaran</td>
+                  <td style="padding:8px 0;font-size:18px;font-weight:600;text-align:right;color:${TEXT};">${formatPrice(params.totalAmount)}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div style="background:rgba(27,43,34,0.04);border:1px solid ${BORDER};border-radius:4px;padding:24px;margin-bottom:32px;">
+              <h4 style="margin:0 0 12px 0;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;">Status Pembayaran: ${params.status}</h4>
+              <p style="margin:0;font-size:13px;line-height:1.5;opacity:0.8;">Kami akan segera mengirimkan nomor resi setelah pesanan Anda diserahkan ke kurir.</p>
+            </div>
+
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td align="center">
+                <a href="${escapeHtml(params.orderUrl ?? siteUrl)}" style="display:inline-block;padding:14px 32px;background-color:${TEXT};color:${BACKGROUND};text-decoration:none;font-size:12px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;border-radius:4px;">
+                  Lihat Detail Pesanan
+                </a>
+              </td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 40px;text-align:center;border-top:1px solid ${BORDER};">
+            <p style="margin:0;font-size:11px;color:${TEXT};opacity:0.7;">benangbaju · Dirajut dengan rasa</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim();
 }
 
 function escapeHtml(s: string): string {
@@ -73,15 +177,28 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/**
- * MOCK: Simulates sending order confirmation email
- */
 export async function sendOrderConfirmationEmail(
   params: SendOrderConfirmationParams,
 ): Promise<{ success: boolean; error?: string; messageId?: string }> {
-  console.log(`[MOCK EMAIL] Sending order confirmation to ${params.customerEmail}`);
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return { success: true, messageId: "mock-msg-123" };
+  try {
+    const html = generateOrderConfirmationHtml(params);
+    const resend = getResendClient();
+    const { data, error } = await resend.emails.send({
+      from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      to: params.customerEmail,
+      subject: `Konfirmasi Pesanan #${params.orderId.slice(0, 8).toUpperCase()} — benangbaju`,
+      html,
+    });
+
+    if (error) throw error;
+    return { success: true, messageId: data?.id ?? undefined };
+  } catch (err: unknown) {
+    console.error("[EMAIL] Error sending confirmation:", err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
 
 // ─── D+3: Check-in ───────────────────────────────────────────────────────────
@@ -247,81 +364,6 @@ export async function sendD7ReorderEmail(params: SendSequenceEmailParams) {
   }
 }
 
-// ─── SHIPPING TRACKING ───────────────────────────────────────────────────────
-
-export interface SendTrackingEmailParams {
-  customerEmail: string;
-  customerName: string | null;
-  orderId: string;
-  trackingCode: string;
-  trackingUrl?: string | null;
-  trackingCarrier?: string | null;
-  siteUrl?: string;
-}
-
-function generateTrackingHtml(params: SendTrackingEmailParams): string {
-  const shortId = params.orderId.slice(0, 8).toUpperCase();
-  const carrier = params.trackingCarrier ?? "Kurir Lokal";
-  
-  return `
-<!DOCTYPE html>
-<html lang="id-ID">
-<head>
-  <meta charset="UTF-8">
-  <title>Pesanan Anda Sedang Dikirim — benangbaju</title>
-</head>
-<body style="margin:0;padding:0;font-family:sans-serif;background-color:${BACKGROUND};color:${TEXT};">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background-color:${BACKGROUND};border:1px solid ${BORDER};">
-        <tr>
-          <td style="padding:32px 40px;text-align:center;border-bottom:1px solid ${BORDER};">
-            <h1 style="margin:0;font-size:22px;font-weight:300;letter-spacing:0.1em;text-transform:uppercase;color:${TEXT};">benangbaju</h1>
-            <p style="margin:0;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:${TEXT};opacity:0.7;">Pesanan Dikirim</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:36px 40px;">
-            <p style="margin:0 0 20px 0;font-size:15px;line-height:1.6;">Halo, ${escapeHtml(params.customerName?.split(" ")[0] ?? "Pelanggan")}.</p>
-            <p style="margin:0 0 28px 0;font-size:15px;line-height:1.6;">
-              Kabar baik! Pesanan <strong>#${shortId}</strong> Anda telah diserahkan ke kurir dan sedang dalam perjalanan menuju lokasi Anda.
-            </p>
-            <div style="background:rgba(27,43,34,0.04);border:1px solid ${BORDER};border-radius:4px;padding:24px;margin:0 0 28px 0;">
-              <p style="margin:0 0 8px 0;font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7;">Resi Pengiriman</p>
-              <p style="margin:0 0 12px 0;font-size:20px;font-family:monospace;letter-spacing:0.08em;">${escapeHtml(params.trackingCode)}</p>
-              <p style="margin:0;font-size:13px;opacity:0.75;">Kurir: ${escapeHtml(carrier)}</p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:24px 40px;text-align:center;border-top:1px solid ${BORDER};">
-            <p style="margin:0;font-size:11px;color:${TEXT};opacity:0.7;">benangbaju · Keanggunan di Setiap Helai</p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`.trim();
-}
-
-export async function sendTrackingEmail(params: SendTrackingEmailParams) {
-  try {
-    const html = generateTrackingHtml(params);
-    const resend = getResendClient();
-    const shortId = params.orderId.slice(0, 8).toUpperCase();
-    await resend.emails.send({
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      to: params.customerEmail,
-      subject: `Pesanan #${shortId} Sedang Dikirim — Resi: ${params.trackingCode} | benangbaju`,
-      html,
-    });
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: String(err) };
-  }
-}
-
 // ─── CHECKOUT ABANDONMENT ────────────────────────────────────────────────────
 
 export interface SendAbandonEmailParams {
@@ -385,75 +427,5 @@ export async function sendAbandonEmail(params: SendAbandonEmailParams) {
   } catch (err) {
     return { success: false, error: String(err) };
   }
-}
-
-// ─── PASSWORD RESET ──────────────────────────────────────────────────────────
-
-export interface SendPasswordResetParams {
-  to: string;
-  tempPassword: string;
-}
-
-function generatePasswordResetHtml(params: SendPasswordResetParams): string {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://benangbaju.com";
-  
-  return `
-<!DOCTYPE html>
-<html lang="id-ID">
-<head>
-  <meta charset="UTF-8">
-  <title>Pemulihan Akses — benangbaju</title>
-</head>
-<body style="margin:0;padding:0;font-family:sans-serif;background-color:${BACKGROUND};color:${TEXT};">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background-color:${BACKGROUND};border:1px solid ${BORDER};">
-        <tr>
-          <td style="padding:32px 40px;text-align:center;border-bottom:1px solid ${BORDER};">
-            <h1 style="margin:0;font-size:22px;font-weight:300;letter-spacing:0.1em;text-transform:uppercase;color:${TEXT};">benangbaju</h1>
-            <p style="margin:12px 0 0 0;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.7;">Pemulihan Akses</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:32px 40px;">
-            <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;">Anda meminta pengaturan ulang kata sandi. Berikut adalah kata sandi sementara Anda:</p>
-            <div style="background:rgba(27,43,34,0.08);border:1px solid ${BORDER};border-radius:4px;padding:20px;margin-bottom:24px;text-align:center;">
-              <p style="margin:0;font-size:24px;font-family:monospace;letter-spacing:0.1em;">${escapeHtml(params.tempPassword)}</p>
-            </div>
-            <p style="margin:0 0 24px 0;font-size:14px;line-height:1.6;">Silakan masuk menggunakan kata sandi ini dan segera ganti di halaman <strong>Profil</strong> Anda.</p>
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr><td align="center">
-                <a href="${escapeHtml(siteUrl + "/login")}" style="display:inline-block;padding:14px 28px;background-color:${TEXT};color:${BACKGROUND};text-decoration:none;font-size:12px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;border-radius:4px;">
-                  Masuk Sekarang
-                </a>
-              </td></tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`.trim();
-}
-
-export async function sendPasswordResetEmail(params: SendPasswordResetParams) {
-  try {
-    const html = generatePasswordResetHtml(params);
-    const resend = getResendClient();
-    await resend.emails.send({
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      to: params.to,
-      subject: "Pemulihan Akses Akun — benangbaju",
-      html,
-    });
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: String(err) };
-  }
-}
-
-export function isEmailConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 

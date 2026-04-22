@@ -10,6 +10,9 @@ import {
 } from "lucide-react";
 import { Order } from "@/types/database";
 import Link from "next/link";
+import { formatPrice } from "@/utils/format";
+import AdminPagination from "@/components/admin/AdminPagination";
+import { buildAdminHref } from "@/lib/admin/build-admin-href";
 
 const statusStyles: Record<string, string> = {
   pending: "bg-amber-50 text-amber-600 border-amber-100",
@@ -23,50 +26,62 @@ type OrderRow = Order & {
   profiles?: { full_name?: string | null } | null;
 };
 
-const orders = [
-  {
-    id: "ord-12345678",
-    user_id: "mock-user",
-    created_at: "2024-05-20T10:00:00Z",
-    updated_at: "2024-05-20T10:00:00Z",
-    customer_name: "Andi Pratama",
-    customer_email: "andi@example.com",
-    total_amount: 588000,
-    status: "paid",
-    profiles: { full_name: "Andi Pratama" }
-  },
-  {
-    id: "ord-87654321",
-    user_id: "mock-user",
-    created_at: "2024-05-19T10:00:00Z",
-    updated_at: "2024-05-19T10:00:00Z",
-    customer_name: "Siti Aminah",
-    customer_email: "siti@example.com",
-    total_amount: 389000,
-    status: "shipped",
-    profiles: { full_name: "Siti Aminah" }
-  },
-  {
-    id: "ord-11223344",
-    user_id: "mock-user",
-    created_at: "2024-05-18T10:00:00Z",
-    updated_at: "2024-05-18T10:00:00Z",
-    customer_name: "Budi Santoso",
-    customer_email: "budi@example.com",
-    total_amount: 199000,
-    status: "pending",
-    profiles: { full_name: "Budi Santoso" }
-  }
-];
+import { getAdminOrderStatusCounts, listOrdersForAdminPaged } from "@/lib/order-service";
+import type { AdminOrderStatus } from "@/lib/order-service";
 
-export default async function AdminOrdersPage() {
+type AdminOrdersPageProps = {
+  searchParams?: Promise<{
+    page?: string;
+    pageSize?: string;
+    status?: string;
+    q?: string;
+  }>;
+};
+
+const allowedStatuses: AdminOrderStatus[] = ["pending", "paid", "shipped", "delivered", "cancelled"];
+
+function resolveInt(value: string | undefined, fallback: number) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+}
+
+function resolveStatus(value: string | undefined): AdminOrderStatus | undefined {
+  if (!value) return undefined;
+  return (allowedStatuses as string[]).includes(value) ? (value as AdminOrderStatus) : undefined;
+}
+
+const basePath = "/admin/orders";
+
+export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageProps) {
+  const params = searchParams ? await searchParams : undefined;
+  const page = Math.max(resolveInt(params?.page, 1), 1);
+  const pageSize = Math.min(Math.max(resolveInt(params?.pageSize, 20), 10), 100);
+  const status = resolveStatus(params?.status);
+  const q = params?.q?.trim() || "";
+
+  const [counts, paged] = await Promise.all([
+    getAdminOrderStatusCounts(),
+    listOrdersForAdminPaged({ page, pageSize, status, q }),
+  ]);
+
+  const orders = paged.data;
+  const total = paged.total;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const query = { page: safePage, pageSize, status, q };
+  const pendingCount = counts.pending;
+  const paidCount = counts.paid;
+  const shippedCount = counts.shipped;
   
 
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="surface-card border border-gray-100/80 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-brand-softblack/35">
+            Orders Control Room
+          </p>
           <h2 className="text-2xl font-light text-brand-softblack tracking-tight">
             Monitoring Pesanan
           </h2>
@@ -83,56 +98,89 @@ export default async function AdminOrdersPage() {
 
       {/* Summary Cards Mini */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="surface-card p-6 flex items-center gap-4">
+        <div className="surface-card border border-gray-100/80 p-6 flex items-center gap-4">
           <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
             <Clock size={20} />
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Menunggu Pembayaran</div>
-            <div className="text-xl font-medium text-brand-softblack">
-              {(orders as Order[])?.filter((o: Order) => o.status === 'pending').length || 0}
-            </div>
+            <div className="text-xl font-medium text-brand-softblack">{pendingCount}</div>
           </div>
         </div>
-        <div className="surface-card p-6 flex items-center gap-4">
+        <div className="surface-card border border-gray-100/80 p-6 flex items-center gap-4">
           <div className="p-3 bg-brand-green/10 text-brand-green rounded-xl">
             <CheckCircle2 size={20} />
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Telah Dibayar</div>
-            <div className="text-xl font-medium text-brand-softblack">
-              {(orders as Order[])?.filter((o: Order) => o.status === 'paid').length || 0}
-            </div>
+            <div className="text-xl font-medium text-brand-softblack">{paidCount}</div>
           </div>
         </div>
-        <div className="surface-card p-6 flex items-center gap-4">
+        <div className="surface-card border border-gray-100/80 p-6 flex items-center gap-4">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
             <Truck size={20} />
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Sedang Dikirim</div>
-            <div className="text-xl font-medium text-brand-softblack">
-              {(orders as Order[])?.filter((o: Order) => o.status === 'shipped').length || 0}
-            </div>
+            <div className="text-xl font-medium text-brand-softblack">{shippedCount}</div>
           </div>
         </div>
       </div>
 
       {/* Table Section */}
-      <div className="surface-card overflow-hidden">
+      <div className="surface-card border border-gray-100/80 overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-brand-offwhite/30">
-           <div className="relative flex-1 max-w-md">
+           <form action="/admin/orders" method="get" className="relative flex-1 max-w-md">
+             {status && <input type="hidden" name="status" value={status} />}
+             {pageSize !== 20 && <input type="hidden" name="pageSize" value={String(pageSize)} />}
              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-             <input 
-               type="text" 
+             <input
+               type="text"
+               name="q"
+               defaultValue={q}
                placeholder="Cari ID pesanan atau email..."
                className="w-full pl-10 pr-4 py-2 bg-white border border-gray-100 text-xs focus:ring-1 focus:ring-brand-green/30 outline-none"
              />
+           </form>
+           <div className="flex items-center gap-2">
+             <Link
+              href={buildAdminHref(basePath, query, { page: 1, status: "pending" })}
+               className={`px-4 py-2 text-[10px] uppercase tracking-widest border transition-colors ${
+                 status === "pending"
+                   ? "bg-brand-softblack text-white border-brand-softblack"
+                   : "bg-white text-brand-softblack/60 border-gray-100 hover:text-brand-softblack"
+               }`}
+             >
+               Pending
+             </Link>
+             <Link
+              href={buildAdminHref(basePath, query, { page: 1, status: "paid" })}
+               className={`px-4 py-2 text-[10px] uppercase tracking-widest border transition-colors ${
+                 status === "paid"
+                   ? "bg-brand-softblack text-white border-brand-softblack"
+                   : "bg-white text-brand-softblack/60 border-gray-100 hover:text-brand-softblack"
+               }`}
+             >
+               Paid
+             </Link>
+             <Link
+              href={buildAdminHref(basePath, query, { page: 1, status: "shipped" })}
+               className={`px-4 py-2 text-[10px] uppercase tracking-widest border transition-colors ${
+                 status === "shipped"
+                   ? "bg-brand-softblack text-white border-brand-softblack"
+                   : "bg-white text-brand-softblack/60 border-gray-100 hover:text-brand-softblack"
+               }`}
+             >
+               Shipped
+             </Link>
+             <Link
+              href={buildAdminHref(basePath, query, { page: 1, status: undefined })}
+               className="flex items-center gap-2 px-4 py-2 text-[10px] uppercase tracking-widest text-brand-softblack/60 hover:text-brand-softblack transition-colors"
+             >
+               <Filter size={14} />
+               Reset
+             </Link>
            </div>
-           <button type="button" className="flex items-center gap-2 px-4 py-2 text-[10px] uppercase tracking-widest text-brand-softblack/60 hover:text-brand-softblack transition-colors">
-             <Filter size={14} />
-             Filter Lainnya
-           </button>
         </div>
 
         <div className="overflow-x-auto">
@@ -176,7 +224,7 @@ export default async function AdminOrdersPage() {
                     </div>
                   </td>
                   <td className="px-6 py-5 text-sm font-medium text-brand-softblack">
-                    Rp {order.total_amount.toLocaleString('id-ID')}
+                    {formatPrice(order.total_amount)}
                   </td>
                   <td className="px-6 py-5">
                     <span className={`px-3 py-1 text-[9px] uppercase tracking-widest font-semibold border rounded-full ${statusStyles[order.status] || "bg-gray-50 text-gray-500 border-gray-100"}`}>
@@ -197,13 +245,26 @@ export default async function AdminOrdersPage() {
               {(!orders || orders.length === 0) && (
                 <tr>
                   <td colSpan={6} className="px-8 py-20 text-center">
-                    <p className="text-sm font-light text-brand-softblack/40 italic">Belum ada pesanan yang masuk.</p>
+                    <p className="text-sm font-light text-brand-softblack/40 italic">
+                      {q || status ? "Tidak ada hasil yang cocok dengan filter saat ini." : "Belum ada pesanan yang masuk."}
+                    </p>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        <AdminPagination
+          basePath="/admin/orders"
+          page={safePage}
+          pageSize={pageSize}
+          total={total}
+          query={{
+            status,
+            q,
+          }}
+        />
       </div>
     </div>
   );

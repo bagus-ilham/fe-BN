@@ -32,14 +32,14 @@ function scheduleCleanup() {
   }, 60_000);
 }
 
-export interface RateLimitOptions {
+interface RateLimitOptions {
   /** Jumlah maksimum request yang diizinkan dalam satu window */
   limit: number;
   /** Durasi window dalam milidetik */
   windowMs: number;
 }
 
-export interface RateLimitResult {
+interface RateLimitResult {
   success: boolean;
   /** Sisa request pada window saat ini */
   remaining: number;

@@ -6,7 +6,7 @@ import { FREE_SHIPPING_THRESHOLD } from "@/lib/checkout-config";
 import { ShippingQuoteOption } from "@/types/checkout";
 import { formatPrice } from "@/utils/format";
 
-export interface ShippingQuoteSelectorProps {
+interface ShippingQuoteSelectorProps {
   /** Kode Pos tujuan (5 digit) */
   postalCode: string;
   /** Opção selecionada (objeto completo ou null) */

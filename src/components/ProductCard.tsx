@@ -2,28 +2,36 @@
 import Link from "next/link";
 import Image from "next/image";
 import { memo, useState } from "react";
-import { Product } from "@/constants/products";
 import { useCart } from "@/context/CartContext";
 import { trackSelectItem } from "@/lib/analytics";
 import { formatPrice } from "@/utils/format";
 import { motion, AnimatePresence } from "framer-motion";
+import { ProductWithExtras } from "@/types/database";
 
-function ProductCard({ product, priority, index = 0 }: { product: Product; priority?: boolean; index?: number }) {
+function ProductCard({ 
+  product, 
+  priority, 
+  index = 0 
+}: { 
+  product: ProductWithExtras; 
+  priority?: boolean; 
+  index?: number 
+}) {
   const { addToCart } = useCart();
   const [isHovered, setIsHovered] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const hasDiscount = product.oldPrice && product.oldPrice > product.price;
+  const hasDiscount = product.oldPrice && product.oldPrice > product.base_price;
 
-  const hoverImage = product.additionalImages && product.additionalImages.length > 1
-    ? product.additionalImages[1]
-    : product.image;
+  const hoverImage = product.additional_images && product.additional_images.length > 1
+    ? product.additional_images[1]
+    : product.image_url || "/images/products/glow.jpeg";
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (product.soldOut || isAdding) return;
+    if (!product.is_active || isAdding) return;
     setIsAdding(true);
-    addToCart(product);
+    addToCart(product as any);
     setTimeout(() => setIsAdding(false), 1800);
   };
 
@@ -45,8 +53,8 @@ function ProductCard({ product, priority, index = 0 }: { product: Product; prior
           trackSelectItem({
             itemId: product.id,
             itemName: product.name,
-            price: product.price,
-            category: product.category,
+            price: product.base_price,
+            category: product.category_id || undefined,
             itemListId: "homepage",
             itemListName: "Featured products",
           })
@@ -64,7 +72,7 @@ function ProductCard({ product, priority, index = 0 }: { product: Product; prior
               className="absolute inset-0"
             >
               <Image
-                src={product.image}
+                src={product.image_url || "/images/products/glow.jpeg"}
                 alt={product.name}
                 fill
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
@@ -97,7 +105,7 @@ function ProductCard({ product, priority, index = 0 }: { product: Product; prior
         <div className="absolute inset-x-0 bottom-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] z-30 hidden md:block">
           <button
             onClick={handleQuickAdd}
-            disabled={product.soldOut || isAdding}
+            disabled={!product.is_active || isAdding}
             className="glimmer-hover w-full bg-white/92 backdrop-blur-lg py-3 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack hover:bg-brand-softblack hover:text-white transition-all duration-300 shadow-[0_8px_30px_rgba(28,28,28,0.15)] flex items-center justify-center gap-2 disabled:opacity-60"
           >
             <AnimatePresence mode="wait">
@@ -125,7 +133,7 @@ function ProductCard({ product, priority, index = 0 }: { product: Product; prior
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
                   </svg>
-                  {product.soldOut ? "Habis" : "Tambah ke Tas"}
+                  {!product.is_active ? "Habis" : "Tambah ke Tas"}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -133,7 +141,7 @@ function ProductCard({ product, priority, index = 0 }: { product: Product; prior
         </div>
 
         {/* ── SOLD OUT OVERLAY ── */}
-        {product.soldOut && (
+        {!product.is_active && (
           <div className="absolute inset-0 bg-white/45 backdrop-blur-[2px] z-20 flex items-center justify-center">
             <span className="bg-brand-softblack/90 text-white px-5 py-2 text-[9px] uppercase tracking-[0.3em] font-semibold shadow-xl backdrop-blur-sm transform -rotate-2">
               Sold Out
@@ -160,7 +168,7 @@ function ProductCard({ product, priority, index = 0 }: { product: Product; prior
         {hasDiscount && product.oldPrice && (
           <div className="absolute top-2.5 right-2.5 z-10">
             <span className="bg-brand-sale-red text-white px-2 py-1 text-[9px] uppercase tracking-widest font-bold shadow-sm">
-              -{Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}%
+              -{Math.round(((product.oldPrice - product.base_price) / product.oldPrice) * 100)}%
             </span>
           </div>
         )}
@@ -177,7 +185,7 @@ function ProductCard({ product, priority, index = 0 }: { product: Product; prior
         {/* Price row */}
         <div className="flex items-baseline gap-2">
           <span className="text-[11px] md:text-xs font-semibold text-brand-softblack tracking-wider">
-            {formatPrice(product.price)}
+            {formatPrice(product.base_price)}
           </span>
           {hasDiscount && product.oldPrice && (
             <span className="text-[9px] md:text-[10px] text-brand-softblack/30 line-through font-light">
@@ -187,9 +195,9 @@ function ProductCard({ product, priority, index = 0 }: { product: Product; prior
         </div>
 
         {/* Color Swatches — diperbesar */}
-        {product.colorVariants && product.colorVariants.length > 0 && (
+        {product.color_variants && product.color_variants.length > 0 && (
           <div className="flex items-center justify-center gap-2 mt-3">
-            {product.colorVariants.map((variant, i) => (
+            {product.color_variants.map((variant: any, i: number) => (
               <div
                 key={i}
                 className="relative group/swatch"
@@ -214,11 +222,11 @@ function ProductCard({ product, priority, index = 0 }: { product: Product; prior
       {/* Mobile Quick Add */}
       <div className="mt-3.5 md:hidden">
         <button
-          onClick={() => !product.soldOut && addToCart(product)}
-          disabled={product.soldOut}
+          onClick={() => product.is_active && addToCart(product as any)}
+          disabled={!product.is_active}
           className="w-full border border-brand-softblack/12 py-2.5 text-[9px] uppercase tracking-widest font-medium text-brand-softblack active:bg-brand-softblack active:text-white transition-all hover:border-brand-softblack/30"
         >
-          {product.soldOut ? "Habis" : "Beli"}
+          {!product.is_active ? "Habis" : "Beli"}
         </button>
       </div>
     </motion.div>

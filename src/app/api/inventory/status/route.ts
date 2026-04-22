@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit, getClientIp } from '@/utils/rate-limit';
-import { getSupabaseAdmin } from '@/utils/supabase';
+import { InventoryStatusItem } from '@/types/contracts/inventory';
+import { getInventoryStatus } from '@/lib/inventory-service';
+import { API_ERROR_MESSAGES, INVENTORY_ERROR_MESSAGES } from '@/constants/api-messages';
 
 // ============================================================================
 // API: CONSULTAR STATUS DO ESTOQUE
@@ -18,7 +20,7 @@ export async function GET(req: NextRequest) {
   const rl = rateLimit(getClientIp(req), { limit: 60, windowMs: 60_000 });
   if (!rl.success) {
     return NextResponse.json(
-      { error: 'Too many requests' },
+      { error: API_ERROR_MESSAGES.TOO_MANY_REQUESTS },
       {
         status: 429,
         headers: {
@@ -31,38 +33,24 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const supabaseAdmin = getSupabaseAdmin();
     const { searchParams } = new URL(req.url);
     const productId = searchParams.get('product_id');
-
-    // Consultar view inventory_status
-    let query = supabaseAdmin
-      .from('inventory_status')
-      .select('*')
-      .eq('is_active', true);
-
-    // Filtrar por produto específico se fornecido
-    if (productId) {
-      query = query.eq('product_id', productId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching inventory status:', error);
+    const result = await getInventoryStatus(productId);
+    if (!result.ok) {
       return NextResponse.json(
-        { error: 'Failed to fetch inventory status', details: error.message },
+        { error: INVENTORY_ERROR_MESSAGES.FETCH_STATUS_FAILED, details: result.error },
         { status: 500 }
       );
     }
+    const normalized: InventoryStatusItem[] = result.data;
 
     // Se consultou produto específico, retornar apenas ele
     if (productId) {
-      const product = data && data.length > 0 ? data[0] : null;
+      const product = normalized.length > 0 ? normalized[0] : null;
       
       if (!product) {
         return NextResponse.json(
-          { error: 'Product not found' },
+          { error: INVENTORY_ERROR_MESSAGES.PRODUCT_NOT_FOUND },
           { status: 404 }
         );
       }
@@ -77,7 +65,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Retornar todos os produtos
-    return NextResponse.json(data, {
+    return NextResponse.json(normalized, {
       headers: {
         "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
       },
@@ -86,7 +74,7 @@ export async function GET(req: NextRequest) {
   } catch (err: unknown) {
     console.error('Error in inventory status API:', err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Internal server error' },
+      { error: err instanceof Error ? err.message : API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR },
       { status: 500 }
     );
   }

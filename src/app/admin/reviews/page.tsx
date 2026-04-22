@@ -6,41 +6,15 @@ import {
 import Image from "next/image";
 import ReviewTableActions from "../../../components/admin/ReviewTableActions";
 import { Review } from "@/types/database";
+import { listAllReviewsForAdmin } from "@/lib/review-service";
 
 type ReviewRow = Review & {
   products?: { name?: string | null } | null;
   image_url?: string | null;
 };
 
-const reviews = [
-  {
-    id: "rev-1",
-    product_id: "mock-prod-1",
-    user_id: "mock-user",
-    created_at: "2024-05-20T10:00:00Z",
-    author_name: "Liana Martha",
-    author_email: "liana@example.com",
-    rating: 5,
-    text: "Bahannya sangat adem dan jahitannya rapi sekali. Sesuai ekspektasi!",
-    status: "approved",
-    products: { name: "Dress Midi Batik Modern" }
-  },
-  {
-    id: "rev-2",
-    product_id: "mock-prod-2",
-    user_id: "mock-user",
-    created_at: "2024-05-19T22:00:00Z",
-    author_name: "Budi Santoso",
-    author_email: "budi@example.com",
-    rating: 4,
-    text: "Warna aslinya sedikit lebih gelap dari foto, tapi tetap bagus dan nyaman dipakai.",
-    status: "pending",
-    products: { name: "Blouse Katun Combed" }
-  }
-];
-
 export default async function AdminReviewsPage() {
-  
+  const reviews = await listAllReviewsForAdmin() as ReviewRow[];
 
   return (
     <div className="space-y-8">
@@ -59,7 +33,7 @@ export default async function AdminReviewsPage() {
         <div className="surface-card bg-brand-softblack p-8 text-brand-offwhite flex justify-between items-center">
           <div>
             <div className="text-[10px] uppercase tracking-[0.3em] opacity-40 mb-2">Tertunda (Pending)</div>
-            <div className="text-3xl font-light">{(reviews as Review[])?.filter((r: Review) => r.status === 'pending').length || 0}</div>
+            <div className="text-3xl font-light">{reviews?.filter((r) => r.status === 'pending').length || 0}</div>
           </div>
           <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center">
             <MessageSquare size={20} className="opacity-40" />
@@ -68,7 +42,7 @@ export default async function AdminReviewsPage() {
         <div className="surface-card p-8 flex justify-between items-center">
           <div>
             <div className="text-[10px] uppercase tracking-[0.3em] text-brand-softblack/40 mb-2">Ulasan Publik</div>
-            <div className="text-3xl font-light text-brand-softblack">{(reviews as Review[])?.filter((r: Review) => r.status === 'approved').length || 0}</div>
+            <div className="text-3xl font-light text-brand-softblack">{reviews?.filter((r) => r.status === 'approved').length || 0}</div>
           </div>
           <div className="w-12 h-12 rounded-full bg-brand-offwhite flex items-center justify-center">
             <Star size={20} className="text-brand-green" />
@@ -90,7 +64,7 @@ export default async function AdminReviewsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-sm">
-              {(reviews as unknown as ReviewRow[])?.map((review) => (
+              {reviews?.map((review) => (
                 <tr key={review.id} className="hover:bg-brand-offwhite/10 transition-colors group">
                   <td className="px-6 py-5 max-w-[200px]">
                     <div className="flex flex-col gap-1">
@@ -113,7 +87,7 @@ export default async function AdminReviewsPage() {
                         &quot;{review.text}&quot;
                       </p>
                       <span className="text-[9px] uppercase tracking-widest text-brand-softblack/30">
-                        {new Date(review.created_at).toLocaleDateString('id-ID')}
+                        {review.created_at ? new Date(review.created_at).toLocaleDateString('id-ID') : '-'}
                       </span>
                     </div>
                   </td>
@@ -136,7 +110,7 @@ export default async function AdminReviewsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-5 text-right">
-                    <ReviewTableActions reviewId={review.id} currentStatus={review.status} />
+                    <ReviewTableActions reviewId={review.id} currentStatus={review.status as any} />
                   </td>
                 </tr>
               ))}
@@ -155,4 +129,5 @@ export default async function AdminReviewsPage() {
     </div>
   );
 }
+
 

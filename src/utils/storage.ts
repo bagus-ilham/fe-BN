@@ -1,11 +1,9 @@
-/**
- * MOCK Storage Utility — benangbaju (Mockup Mode)
- * Stubbed to simulate uploads and deletions safely.
- */
+import { supabase } from "./supabase";
 
 export const BUCKETS = {
   PRODUCTS: "product-images",
   REVIEWS: "review-images",
+  SITE_ASSETS: "site-assets",
 } as const;
 
 export type BucketName = typeof BUCKETS[keyof typeof BUCKETS];
@@ -15,36 +13,36 @@ export async function uploadFile(
   bucket: BucketName = BUCKETS.PRODUCTS,
   path: string = ""
 ) {
-  console.log(`[MOCK STORAGE] Uploading ${file.name} to ${bucket}`);
-  
-  // Simulate delay
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = path ? `${path}/${fileName}` : fileName;
 
-  const mockPath = `${path ? path + "/" : ""}${Date.now()}-${file.name}`;
-  
-  return {
-    path: mockPath,
-    url: "https://placehold.co/600x400?text=Mock+Upload",
-    error: null
-  };
-}
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
 
-export async function deleteFile(path: string, bucket: BucketName = BUCKETS.PRODUCTS) {
-  console.log(`[MOCK STORAGE] Deleting ${path} from ${bucket}`);
-  return { success: true, error: null };
-}
+    if (error) throw error;
 
-export function validateImage(file: File, maxSizeMB: number = 2) {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-  
-  if (!allowedTypes.includes(file.type)) {
-    return { valid: false, error: 'Tipe file tidak didukung. Gunakan JPG, PNG, WEBP, atau GIF.' };
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(data.path);
+
+    return {
+      path: data.path,
+      url: publicUrl,
+      error: null
+    };
+  } catch (error: any) {
+    console.error(`[STORAGE] Upload error:`, error);
+    return {
+      path: null,
+      url: null,
+      error: error.message || "Gagal mengunggah file"
+    };
   }
-
-  const maxSizeBytes = maxSizeMB * 1024 * 1024;
-  if (file.size > maxSizeBytes) {
-    return { valid: false, error: `Ukuran file terlalu besar. Maksimal ${maxSizeMB}MB.` };
-  }
-
-  return { valid: true, error: null };
 }
+

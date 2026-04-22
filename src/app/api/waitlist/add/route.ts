@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/utils/supabase';
+import { addEmailToWaitlist } from "@/lib/application/marketing/waitlist-use-case";
+import { badRequest, internalError, ok } from "@/lib/http/api-response";
+import { API_ERROR_MESSAGES, WAITLIST_ERROR_MESSAGES, WAITLIST_MESSAGES, requiredFieldsMessage } from "@/constants/api-messages";
 
 // ============================================================================
 // API: ADICIONAR À WAITLIST
@@ -11,74 +12,53 @@ import { getSupabaseAdmin } from '@/utils/supabase';
 interface AddToWaitlistRequest {
   product_id: string;
   email: string;
-  user_id?: string;
 }
 
 /**
  * POST /api/waitlist/add
- * Body: { product_id, email, user_id? }
+ * Body: { product_id, email }
  */
 export async function POST(req: Request) {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
     const body: AddToWaitlistRequest = await req.json();
 
     // Validações
     if (!body.product_id || !body.email) {
-      return NextResponse.json(
-        { error: 'Missing required fields: product_id, email' },
-        { status: 400 }
-      );
+      return badRequest(requiredFieldsMessage(["product_id", "email"]));
     }
 
     // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      );
+      return badRequest(WAITLIST_ERROR_MESSAGES.INVALID_EMAIL_FORMAT);
     }
 
-    // Chamar função do PostgreSQL
-    const { data, error } = await supabaseAdmin.rpc('add_to_waitlist', {
-      p_product_id: body.product_id,
-      p_email: body.email.toLowerCase().trim(),
-      p_user_id: body.user_id || null,
+    const result = await addEmailToWaitlist({
+      productId: body.product_id,
+      email: body.email,
     });
 
-    if (error) {
-      console.error('[WAITLIST ERROR] Error adding to waitlist:', error);
-      return NextResponse.json(
-        { error: 'Failed to add to waitlist', details: error.message },
-        { status: 500 }
-      );
+    if (!result.ok) {
+      if (result.status === 404) {
+        return ok({ success: false, error: result.error }, 404);
+      }
+      return internalError(result.error, result.details);
     }
 
-    const response = data as {
-      success: boolean;
-      error?: string;
-      waitlist_id?: string;
-      product_name?: string;
-      message?: string;
-    };
-
-    // Se falhou (produto não encontrado)
-    if (!response.success) {
-      return NextResponse.json(
-        { error: response.error },
-        { status: 404 }
-      );
+    if (result.data.alreadyExists) {
+      return ok({
+        success: true,
+        product_name: result.data.productName,
+        message: WAITLIST_MESSAGES.ALREADY_REGISTERED,
+      });
     }
 
-    // Sucesso
-    return NextResponse.json({
+    return ok({
       success: true,
-      waitlist_id: response.waitlist_id,
-      product_name: response.product_name,
-      message: response.message || 'Você será notificado quando o produto voltar ao estoque',
+      waitlist_id: result.data.waitlistId,
+      product_name: result.data.productName,
+      message: WAITLIST_MESSAGES.NOTIFICATION_SET,
     });
-
   } catch (error: unknown) {
     // Log estruturado do erro
     console.error('[WAITLIST ERROR] Error in add to waitlist API:', 
@@ -89,11 +69,8 @@ export async function POST(req: Request) {
     
     const errorMessage = error instanceof Error 
       ? error.message 
-      : 'Internal server error';
+      : API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR;
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    return internalError(errorMessage);
   }
 }

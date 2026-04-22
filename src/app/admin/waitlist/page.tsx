@@ -1,3 +1,4 @@
+import { getAdminWaitlistOverview } from "@/lib/application/marketing/marketing-query-service";
 import { 
   Bell,
   Mail,
@@ -6,27 +7,7 @@ import {
   Info
 } from "lucide-react";
 
-const waitlist = [
-  {
-    id: "w-1",
-    email: "customer1@example.com",
-    created_at: "2024-05-20T10:00:00Z",
-    notified_at: null,
-    products: { name: "Dress Midi Batik Modern" }
-  },
-  {
-    id: "w-2",
-    email: "customer2@example.com",
-    created_at: "2024-05-19T10:00:00Z",
-    notified_at: "2024-05-20T11:00:00Z",
-    products: { name: "Blouse Katun Combed" }
-  }
-];
-
 export default async function AdminWaitlistPage() {
-  
-
-  // Calculate popularity
   type WaitlistRow = {
     id: string;
     email: string;
@@ -35,14 +16,7 @@ export default async function AdminWaitlistPage() {
     products?: { name?: string | null; image_url?: string | null } | null;
   };
 
-  const productWaitCounts = (waitlist as WaitlistRow[] || []).reduce((acc: Record<string, number>, item: WaitlistRow) => {
-    const name = item.products?.name || "Unknown Product";
-    acc[name] = (acc[name] || 0) + 1;
-    return acc;
-  }, {});
-
-  const sortedWaitlist = Object.entries(productWaitCounts)
-    .sort((a, b) => b[1] - a[1]);
+  const { waitlist, sortedWaitlist } = await getAdminWaitlistOverview();
 
   return (
     <div className="space-y-12">
@@ -71,7 +45,7 @@ export default async function AdminWaitlistPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 text-xs">
-                  {(waitlist as WaitlistRow[])?.map((item) => (
+                  {(waitlist as WaitlistRow[])?.map((item: WaitlistRow) => (
                     <tr key={item.id} className="hover:bg-brand-offwhite/10 transition-colors">
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">

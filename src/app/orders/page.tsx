@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { formatPrice } from '@/utils/format';
 import { Check, ExternalLink, Package, Truck, XCircle } from 'lucide-react';
 import Skeleton from '@/components/ui/Skeleton';
-import { createBrowserClient } from '@supabase/ssr';
+import { useAuth } from '@/hooks/useAuth';
 import { OrderWithItems } from '@/types/database';
 
 const statusConfig = {
@@ -21,58 +21,29 @@ const statusConfig = {
 export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const router = useRouter();
   
   useEffect(() => {
     const fetchOrders = async () => {
-      
-      setOrders([
-        {
-          id: 'mock-order-1',
-          user_id: 'mock-user',
-          customer_email: 'mock@example.com',
-          status: 'shipped',
-          total_amount: 588000,
-          payment_order_id: 'mock-payment-1',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          tracking_code: 'BENANG123456789',
-          tracking_carrier: 'J&T Express',
-          order_items: [
-            {
-              id: 'item-1',
-              order_id: 'mock-order-1',
-              product_id: 'prod_1',
-              product_name: 'Dress Midi Batik Modern',
-              quantity: 1,
-              price: 389000,
-              product_image: '/images/products/batik-dress.png',
-              created_at: new Date().toISOString()
-            },
-            {
-              id: 'item-2',
-              order_id: 'mock-order-1',
-              product_id: 'prod_4',
-              product_name: 'Blouse Katun Combed',
-              quantity: 1,
-              price: 199000,
-              product_image: '/images/products/cotton-blouse.png',
-              created_at: new Date().toISOString()
-            }
-          ]
-        }
-      ]);
-      setLoading(false);
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { listUserOrders } = await import("@/lib/order-service");
+        const userOrders = await listUserOrders(user.id);
+        setOrders(userOrders as unknown as OrderWithItems[]);
+      } catch (err) {
+        console.error("Error fetching user orders:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      );
-    }
     fetchOrders();
-  }, [router]);
+  }, [user]);
 
   // Formatação de data
   const formatDate = (dateString: string) => {
@@ -152,7 +123,7 @@ export default function OrdersPage() {
         ) : (
           <div className="space-y-6 md:space-y-8">
             {orders.map((order) => {
-              const statusInfo = statusConfig[order.status];
+              const statusInfo = statusConfig[order.status as keyof typeof statusConfig];
               const StatusIcon = statusInfo.icon;
 
               return (
@@ -190,7 +161,7 @@ export default function OrdersPage() {
                   <div className="p-6 md:p-8">
                     <div className="space-y-4">
                       {order.order_items && order.order_items.length > 0 ? (
-                        order.order_items.map((item) => (
+                        order.order_items.map((item: any) => (
                           <div
                             key={item.id}
                             className="flex items-center gap-4 pb-4 border-b border-stone-50 last:border-0 last:pb-0"

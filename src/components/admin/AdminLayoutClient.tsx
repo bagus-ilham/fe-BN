@@ -2,9 +2,8 @@
 
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Settings, LogOut, ChevronRight, Home } from "lucide-react";
+import { ChevronRight, Home } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export default function AdminLayoutClient({
@@ -14,12 +13,6 @@ export default function AdminLayoutClient({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
-
-  const handleLogout = async () => {
-    if (confirm("Apakah Anda yakin ingin keluar?")) {
-      window.location.href = "/login";
-    }
-  };
 
   const breadcrumbs = useMemo(() => {
     const segments = pathname.split('/').filter(Boolean);
@@ -35,19 +28,12 @@ export default function AdminLayoutClient({
   }, [pathname]);
 
   return (
-    <div className="flex min-h-screen bg-brand-offwhite relative">
+    <div className="flex bg-brand-offwhite text-brand-softblack relative">
       <AdminSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
-      <motion.div 
-        initial={false}
-        animate={{ 
-          paddingLeft: collapsed ? "80px" : "280px",
-        }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="flex-1 flex flex-col min-w-0"
-      >
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Top Navbar Admin */}
-        <header className="h-[72px] bg-white/90 backdrop-blur-xl border-b border-stone-100 flex items-center justify-between px-8 sticky top-0 z-40 shadow-sm">
+        <header className="h-[72px] bg-brand-offwhite/95 backdrop-blur-xl border-b border-brand-champagne flex items-center justify-between px-8 sticky top-0 z-40 shadow-sm">
           {/* Top Gold Accent */}
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-brand-gold/60 via-brand-gold to-brand-gold/60" />
 
@@ -58,7 +44,7 @@ export default function AdminLayoutClient({
             
             {breadcrumbs.map((crumb, idx) => (
               <div key={crumb.href} className="flex items-center gap-3">
-                <ChevronRight size={12} className="text-stone-300" />
+                <ChevronRight size={12} className="text-brand-softblack/25" />
                 <Link 
                   href={crumb.href}
                   className={`text-[10px] uppercase tracking-[0.2em] font-medium transition-colors ${
@@ -74,12 +60,12 @@ export default function AdminLayoutClient({
           </div>
 
           <div className="flex items-center gap-5">
-            <div className="flex items-center gap-3 pr-5 border-r border-stone-200">
+            <div className="flex items-center gap-3 pr-5 border-r border-brand-champagne">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-green opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-green"></span>
               </span>
-              <span className="text-[9px] text-brand-softblack/50 uppercase tracking-widest">Live</span>
+              <span className="text-[9px] text-brand-softblack/55 uppercase tracking-widest">Live</span>
             </div>
 
             <div className="flex items-center gap-3">
@@ -87,7 +73,7 @@ export default function AdminLayoutClient({
                 <span className="text-[10px] font-bold text-brand-softblack uppercase tracking-widest">Admin</span>
                 <span className="text-[9px] text-brand-softblack/40 uppercase tracking-widest">Store Manager</span>
               </div>
-              <div className="w-8 h-8 rounded-full bg-brand-softblack flex items-center justify-center text-white text-[10px] font-bold shadow-md ring-2 ring-white">
+              <div className="w-8 h-8 rounded-full bg-brand-softblack flex items-center justify-center text-white text-[10px] font-bold shadow-md ring-2 ring-brand-champagne">
                 BB
               </div>
             </div>
@@ -95,10 +81,10 @@ export default function AdminLayoutClient({
         </header>
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 p-8 md:p-12 overflow-y-auto">
+        <main className="p-8 md:p-12 bg-brand-offwhite">
           {children}
         </main>
-      </motion.div>
+      </div>
     </div>
   );
 }

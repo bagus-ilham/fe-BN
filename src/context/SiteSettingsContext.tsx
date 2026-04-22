@@ -1,6 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { getSiteSettings } from "@/lib/cms-service";
+import { listCategories, listCollections } from "@/lib/application/products/product-admin-service";
+import { getPublicBrandStats } from "@/lib/dashboard-service";
 
 interface SiteSettings {
   storeName: string;
@@ -13,6 +16,7 @@ interface SiteSettings {
     customers: string;
     reviews: string;
     itemsSold: string;
+    avgRating: string;
   };
   heroSlides: Array<{
     id: number;
@@ -84,11 +88,12 @@ const DEFAULT_SETTINGS: SiteSettings = {
     customers: "10k+",
     reviews: "4.8k+",
     itemsSold: "25k+",
+    avgRating: "4.9",
   },
   heroSlides: [
     {
       id: 1,
-      image: "https://thenblank.com/cdn/shop/files/New_Release_Overlock_Anytime_Long_Tee_-_Desktop_Banner.jpg?v=1776225160",
+      image: "https://gwnegdilmazoobpexlld.supabase.co/storage/v1/object/public/site-assets/hero-1.jpg",
       title: "Overlock Anytime",
       subtitle: "New Collection 2.0",
       cta: "Explore Now",
@@ -96,15 +101,15 @@ const DEFAULT_SETTINGS: SiteSettings = {
     },
     {
       id: 2,
-      image: "https://thenblank.com/cdn/shop/files/THENBLANK___UI_-_Desktop_Banner.jpg?v=1774286441",
-      title: "Thenblank x UI",
+      image: "https://gwnegdilmazoobpexlld.supabase.co/storage/v1/object/public/site-assets/hero-2.jpg",
+      title: "benangbaju x Style",
       subtitle: "Limited Collaboration",
       cta: "Shop The Collaboration",
       link: "/collections"
     },
     {
       id: 3,
-      image: "https://thenblank.com/cdn/shop/files/Sleeveless_Shirt_-_Desktop_Banner_1950x.jpg?v=1775213988",
+      image: "https://gwnegdilmazoobpexlld.supabase.co/storage/v1/object/public/site-assets/hero-3.jpg",
       title: "Modern Basics",
       subtitle: "Essential Sleeveless",
       cta: "View Collection",
@@ -116,7 +121,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
       id: "new-in",
       title: "New In: Overlock Anytime",
       subtitle: "Latest Release",
-      image: "https://thenblank.com/cdn/shop/files/New_Release_Overlock_Anytime_Long_Tee_-_Desktop_Banner.jpg?v=1776225160",
+      image: "https://gwnegdilmazoobpexlld.supabase.co/storage/v1/object/public/site-assets/hero-1.jpg",
       link: "/collections/new-in",
       ctaText: "Belanja Produk Baru"
     },
@@ -124,7 +129,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
       id: "essentials",
       title: "Anytime Essentials",
       subtitle: "Wardrobe Staples",
-      image: "https://thenblank.com/cdn/shop/files/Sleeveless_Shirt_-_Desktop_Banner_1950x.jpg?v=1775213988",
+      image: "https://gwnegdilmazoobpexlld.supabase.co/storage/v1/object/public/site-assets/hero-3.jpg",
       link: "/collections/tops",
       ctaText: "Lihat Semua Atasan",
       reverse: true
@@ -133,7 +138,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
       id: "bundles",
       title: "The Complete Edit",
       subtitle: "Curated Bundles",
-      image: "https://thenblank.com/cdn/shop/files/THENBLANK___UI_-_Desktop_Banner.jpg?v=1774286441",
+      image: "https://gwnegdilmazoobpexlld.supabase.co/storage/v1/object/public/site-assets/hero-2.jpg",
       link: "/collections/bundles",
       ctaText: "Hemat dengan Bundles"
     }
@@ -205,6 +210,120 @@ const SiteSettingsContext = createContext<SiteSettingsContextType | undefined>(u
 
 export function SiteSettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const initSettings = async () => {
+      try {
+        const [dbSettings, dbCats, dbCols, dbStats] = await Promise.all([
+          getSiteSettings(),
+          listCategories(),
+          listCollections(),
+          getPublicBrandStats()
+        ]);
+
+        if (dbSettings) {
+          setSettings(prev => ({
+            ...prev,
+            storeName: dbSettings.store_name || prev.storeName,
+            marqueeText: Array.isArray(dbSettings.marquee_text)
+              ? (dbSettings.marquee_text as SiteSettings["marqueeText"])
+              : prev.marqueeText,
+            freeShippingThreshold: dbSettings.free_shipping_threshold ? Number(dbSettings.free_shipping_threshold) : prev.freeShippingThreshold,
+            primaryPromoCode: dbSettings.primary_promo_code || prev.primaryPromoCode,
+            brandStats: {
+              customers: dbStats.customers > 100 ? `${(dbStats.customers / 1000).toFixed(1)}k+` : `${dbStats.customers}+`,
+              reviews: dbStats.reviews > 100 ? `${(dbStats.reviews / 1000).toFixed(1)}k+` : `${dbStats.reviews}+`,
+              itemsSold: dbStats.itemsSold > 100 ? `${(dbStats.itemsSold / 1000).toFixed(1)}k+` : `${dbStats.itemsSold}+`,
+              avgRating: dbStats.avgRating
+            },
+            heroSlides: Array.isArray(dbSettings.hero_slides)
+              ? (dbSettings.hero_slides as SiteSettings["heroSlides"])
+              : prev.heroSlides,
+            homepageBanners: Array.isArray(dbSettings.homepage_banners)
+              ? (dbSettings.homepage_banners as SiteSettings["homepageBanners"])
+              : prev.homepageBanners,
+            contactInfo:
+              dbSettings.contact_info && typeof dbSettings.contact_info === "object"
+                ? (dbSettings.contact_info as SiteSettings["contactInfo"])
+                : prev.contactInfo,
+            socialLinks:
+              dbSettings.social_links && typeof dbSettings.social_links === "object"
+                ? (dbSettings.social_links as SiteSettings["socialLinks"])
+                : prev.socialLinks,
+            productDetailSettings: prev.productDetailSettings,
+            navigation:
+              dbSettings.navigation && typeof dbSettings.navigation === "object"
+                ? (dbSettings.navigation as SiteSettings["navigation"])
+                : {
+                    ...prev.navigation,
+                    main: [
+                      {
+                        label: "Kategori",
+                        href: "/collections",
+                        megaMenu: [
+                          {
+                            title: "Pilih Kategori",
+                            items: dbCats.map((c: any) => ({
+                              label: c.name,
+                              href: `/collections?category=${encodeURIComponent(c.name)}`,
+                            })),
+                          },
+                        ],
+                      },
+                      {
+                        label: "Koleksi",
+                        href: "/collections",
+                        megaMenu: [
+                          {
+                            title: "Koleksi Spesial",
+                            items: dbCols.map((c: any) => ({
+                              label: c.name,
+                              href: `/collections?collection=${encodeURIComponent(c.name)}`,
+                            })),
+                          },
+                        ],
+                      },
+                      {
+                        label: "Favorit",
+                        href: "/collections",
+                        megaMenu: [
+                          {
+                            title: "Eksklusif",
+                            items: [
+                              { label: "New Arrivals", href: "/collections?badge=new" },
+                              { label: "Best Sellers", href: "/collections?badge=bestseller" },
+                              { label: "Kits & Bundles", href: "/collections?badge=kit" },
+                            ],
+                          },
+                        ],
+                      },
+                      { label: "Tentang Kami", href: "/about" },
+                    ],
+                  },
+            // Categories and Collections from their own tables
+            categories: dbCats.length > 0 ? dbCats.map((c: any) => c.name) : prev.categories,
+            collections: dbCols.length > 0 ? dbCols.map((c: any) => c.name) : prev.collections,
+          }));
+        } else {
+          // If no settings in DB, still update categories/collections if they exist
+          if (dbCats.length > 0 || dbCols.length > 0) {
+            setSettings(prev => ({
+              ...prev,
+              categories: dbCats.length > 0 ? dbCats.map((c: any) => c.name) : prev.categories,
+              collections: dbCols.length > 0 ? dbCols.map((c: any) => c.name) : prev.collections,
+            }));
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load site settings:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initSettings();
+  }, []);
 
   const updateSettings = (newSettings: Partial<SiteSettings>) => {
     setSettings((prev) => ({ ...prev, ...newSettings }));

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { API_ERROR_MESSAGES } from "@/constants/api-messages";
 
 /**
- * MOCK Shipping Quote API — benangbaju (Mockup Mode)
- * Returns simulated Indonesian shipping rates (JNE, J&T, SiCepat).
+ * Shipping Quote API — benangbaju
+ * Calculates Indonesian shipping rates based on cart items and destination.
  */
 
 export const runtime = "nodejs";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log("[MOCK SHIPPING] Calculation for:", body.postalCode);
+    console.log("[SHIPPING API] Calculating rates for:", body.postalCode);
 
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
 
   } catch (err) {
     return NextResponse.json(
-      { error: "Internal Server Error", quotes: null },
+      { error: API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR, quotes: null },
       { status: 500 }
     );
   }

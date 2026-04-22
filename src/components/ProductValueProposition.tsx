@@ -6,7 +6,7 @@ import { Product } from "@/constants/products";
  * Product value highlight — replicates shortDescription.
  */
 export default function ProductValueProposition({ product }: { product: Product }) {
-  const text = product.shortDescription;
+  const text = product.short_description;
   if (!text) return null;
 
   return (

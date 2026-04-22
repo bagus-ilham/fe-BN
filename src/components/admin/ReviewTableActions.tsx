@@ -4,9 +4,11 @@ import { useState } from "react";
 import { Check, X, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+import { updateReviewStatus } from "@/lib/review-service";
+
 interface ReviewTableActionsProps {
   reviewId: string;
-  currentStatus: string;
+  currentStatus: "approved" | "rejected" | "pending";
 }
 
 export default function ReviewTableActions({ reviewId, currentStatus }: ReviewTableActionsProps) {
@@ -15,14 +17,12 @@ export default function ReviewTableActions({ reviewId, currentStatus }: ReviewTa
 
   const handleUpdateStatus = async (status: "approved" | "rejected") => {
     setLoading(true);
-    // Simulate network delay
-    await new Promise(r => setTimeout(r, 800));
     
     try {
-      console.log(`Mock: Updated review ${reviewId} to ${status}`);
+      await updateReviewStatus(reviewId, status);
       router.refresh();
-    } catch (err) {
-      alert("Gagal memperbarui ulasan (Simulasi).");
+    } catch (err: any) {
+      alert("Gagal memperbarui ulasan: " + err.message);
     } finally {
       setLoading(false);
     }

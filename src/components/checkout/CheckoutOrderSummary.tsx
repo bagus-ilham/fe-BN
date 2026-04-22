@@ -12,7 +12,7 @@ import {
 import type { PaymentMethod, InstallmentOption } from "@/types/checkout";
 import { formatPrice } from "@/utils/format";
 
-export interface CheckoutOrderSummaryProps {
+interface CheckoutOrderSummaryProps {
   paymentMethod: PaymentMethod | null;
   installmentOption?: InstallmentOption | null;
   onPaymentMethodChange?: (method: PaymentMethod) => void;
@@ -80,7 +80,7 @@ export default function CheckoutOrderSummary({
           >
             <div className="relative w-14 h-14 shrink-0 rounded-sm overflow-hidden bg-gray-100 border border-gray-100">
               <Image
-                src={item.image ?? "/images/products/glow.jpeg"}
+                src={item.image_url ?? "/images/products/glow.jpeg"}
                 alt={item.name}
                 fill
                 sizes="56px"
@@ -91,8 +91,8 @@ export default function CheckoutOrderSummary({
               <p className="text-brand-softblack/80 font-light line-clamp-2">
                 {item.name} × {item.quantity}
               </p>
-              <p className="font-medium text-brand-softblack mt-0.5">
-                {formatPrice(item.price * item.quantity)}
+               <p className="font-medium text-brand-softblack mt-0.5">
+                {formatPrice(item.base_price * item.quantity)}
               </p>
             </div>
           </div>

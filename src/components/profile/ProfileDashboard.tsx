@@ -3,11 +3,21 @@ import { ShoppingBag, Star, Clock, ArrowRight, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-export default function ProfileDashboard({ user }: { user: any }) {
+export default function ProfileDashboard({ user, loyalty }: { user: any, loyalty: any }) {
+  const points = loyalty?.points || 0;
+  const tier = loyalty?.tier || "Bronze";
+
+  const tierColors: Record<string, string> = {
+    Bronze: "text-orange-700 bg-orange-50 border-orange-100",
+    Silver: "text-slate-500 bg-slate-50 border-slate-100",
+    Gold: "text-amber-600 bg-amber-50 border-amber-100",
+    Platinum: "text-indigo-600 bg-indigo-50 border-indigo-100",
+  };
+
   const stats = [
     { label: "Total Pesanan", value: "2", icon: ShoppingBag, color: "bg-blue-50 text-blue-500" },
     { label: "Wishlist", value: "4", icon: Star, color: "bg-amber-50 text-amber-500" },
-    { label: "Poin Loyalitas", value: "350", icon: Clock, color: "bg-emerald-50 text-emerald-500" },
+    { label: "Poin Loyalitas", value: points.toString(), icon: Clock, color: "bg-emerald-50 text-emerald-500" },
   ];
 
   const recentOrders = [
@@ -20,9 +30,14 @@ export default function ProfileDashboard({ user }: { user: any }) {
       {/* Welcome Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-light uppercase tracking-widest text-brand-softblack mb-2">
-            Selamat Datang, <span className="italic font-serif">{user.name.split(' ')[0]}</span>
-          </h1>
+          <div className="flex items-center gap-4 mb-2">
+            <h1 className="text-3xl font-light uppercase tracking-widest text-brand-softblack">
+              Selamat Datang, <span className="italic font-serif">{user.name.split(' ')[0]}</span>
+            </h1>
+            <span className={`px-4 py-1 text-[9px] uppercase tracking-[0.2em] font-bold border rounded-full ${tierColors[tier]}`}>
+              {tier} Member
+            </span>
+          </div>
           <p className="text-xs text-brand-softblack/40 uppercase tracking-[0.25em]">
             Ringkasan aktivitas akun Anda hari ini
           </p>

@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PRODUCTS } from '@/constants/products';
-import { getSupabaseAdmin } from '@/utils/supabase';
+import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
+import { countOrderItemsWithoutImage, updateMissingOrderItemImages } from "@/lib/application/orders/update-order-images-use-case";
+import { internalError, ok, unauthorized } from "@/lib/http/api-response";
+import { API_ERROR_MESSAGES, orderImagesUpdatedMessage } from "@/constants/api-messages";
 
 /**
  * API Route para atualizar imagens de produtos em pedidos antigos.
@@ -8,10 +10,7 @@ import { getSupabaseAdmin } from '@/utils/supabase';
  * Protegida por ADMIN_SECRET_TOKEN (header x-admin-token).
  */
 
-// Criar mapa de product_id -> image para busca rápida
-const productImageMap = new Map(
-  PRODUCTS.map(product => [product.id, product.image])
-);
+// Remove legacy PRODUCTS import
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,127 +19,53 @@ export async function POST(req: NextRequest) {
 
     if (!expectedToken) {
       console.warn("[ADMIN] ADMIN_SECRET_TOKEN não configurado — rota bloqueada");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorized();
     }
 
     if (!adminToken || adminToken !== expectedToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorized();
     }
-    
-    const supabaseAdmin = getSupabaseAdmin();
+
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
                     process.env.NEXT_PUBLIC_BASE_URL || 
                     'https://vioslabs.com.br';
 
-    // 1. Buscar todos os order_items sem product_image
-    const { data: itemsWithoutImage, error: fetchError } = await supabaseAdmin
-      .from('order_items')
-      .select('id, product_id, product_image')
-      .is('product_image', null);
-
-    if (fetchError) {
-      console.error('Error fetching items without image:', fetchError);
-      return NextResponse.json(
-        { error: `Failed to fetch items: ${fetchError.message}` },
-        { status: 500 }
-      );
+    const result = await updateMissingOrderItemImages(baseUrl);
+    if (!result.ok) {
+      return internalError(result.error);
     }
 
-    if (!itemsWithoutImage || itemsWithoutImage.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'Nenhum item sem imagem encontrado.',
-        updated: 0,
-      });
-    }
+    revalidatePath("/admin/orders");
+    revalidatePath("/orders");
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`📦 Encontrados ${itemsWithoutImage.length} itens sem imagem`);
-    }
-
-    // 2. Atualizar cada item com a imagem do produto
-    let updated = 0;
-    let failed = 0;
-    const errors: string[] = [];
-
-    for (const item of itemsWithoutImage) {
-      // Buscar imagem do produto
-      const productImage = productImageMap.get(item.product_id);
-      
-      if (!productImage) {
-        console.warn(`⚠️ Imagem não encontrada para produto: ${item.product_id}`);
-        failed++;
-        errors.push(`Produto ${item.product_id} não encontrado`);
-        continue;
-      }
-
-      // Normalizar URL da imagem (converter relativa para absoluta)
-      let imageUrl = productImage;
-      if (imageUrl.startsWith('/')) {
-        imageUrl = `${baseUrl}${imageUrl}`;
-      }
-
-      // Atualizar o item
-      const { error: updateError } = await supabaseAdmin
-        .from('order_items')
-        .update({ product_image: imageUrl })
-        .eq('id', item.id);
-
-      if (updateError) {
-        console.error(`❌ Erro ao atualizar item ${item.id}:`, updateError);
-        failed++;
-        errors.push(`Erro ao atualizar item ${item.id}: ${updateError.message}`);
-      } else {
-        updated++;
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`✅ Imagem atualizada para item ${item.id} (produto: ${item.product_id})`);
-        }
-      }
-    }
-
-    return NextResponse.json({
+    return ok({
       success: true,
-      message: `Atualização concluída. ${updated} itens atualizados, ${failed} falharam.`,
-      updated,
-      failed,
-      total: itemsWithoutImage.length,
-      errors: errors.length > 0 ? errors : undefined,
+      message: orderImagesUpdatedMessage(result.data.updated, result.data.failed),
+      updated: result.data.updated,
+      failed: result.data.failed,
+      total: result.data.total,
+      errors: result.data.errors.length > 0 ? result.data.errors : undefined,
     });
 
   } catch (err: unknown) {
     console.error('❌ Error updating order images:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return internalError(err instanceof Error ? err.message : API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR);
   }
 }
 
 // GET para verificar quantos itens precisam ser atualizados
 export async function GET() {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
-
-    const { data, error } = await supabaseAdmin
-      .from('order_items')
-      .select('id, product_id, product_name, product_image')
-      .is('product_image', null);
-
-    if (error) {
-      return NextResponse.json(
-        { error: `Failed to fetch items: ${error.message}` },
-        { status: 500 }
-      );
+    const result = await countOrderItemsWithoutImage();
+    if (!result.ok) {
+      return internalError(result.error);
     }
 
-    return NextResponse.json({
-      count: data?.length || 0,
-      items: data || [],
+    return ok({
+      count: result.data.length,
+      items: result.data,
     });
   } catch (err: unknown) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return internalError(err instanceof Error ? err.message : API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR);
   }
 }

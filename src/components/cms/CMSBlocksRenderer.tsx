@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { CMSBlock } from "@/types/database";
+import type { CmsBlock } from "@/types/database";
 
 interface CMSBlocksRendererProps {
-  blocks: CMSBlock[];
+  blocks: CmsBlock[];
 }
 
 type FAQItem = { q?: unknown; a?: unknown };
@@ -80,7 +80,7 @@ export default function CMSBlocksRenderer({ blocks }: CMSBlocksRendererProps) {
                 {asString(data.title, "Pertanyaan Umum")}
               </h2>
               <div className="space-y-2">
-                {items.map((item, index) => {
+                {items.map((item: unknown, index: number) => {
                   const faqItem = typeof item === "object" && item ? (item as FAQItem) : null;
                   const q = faqItem ? asString(faqItem.q) : "";
                   const a = faqItem ? asString(faqItem.a) : "";
@@ -129,7 +129,7 @@ export default function CMSBlocksRenderer({ blocks }: CMSBlocksRendererProps) {
                 {asString(data.title, "Galeri")}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {images.map((image, index) => {
+                {images.map((image: unknown, index: number) => {
                   const galleryItem = typeof image === "object" && image ? (image as GalleryItem) : null;
                   const src = galleryItem ? asString(galleryItem.src) : "";
                   const alt = galleryItem ? asString(galleryItem.alt, "Gambar") : "Gambar";

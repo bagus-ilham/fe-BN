@@ -23,10 +23,14 @@ import ProductDetailsTable from "@/components/ProductDetailsTable";
 import StickyBar from "@/components/StickyBar";
 import { trackViewItem } from "@/lib/analytics";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
-import { InventoryStatus } from "@/types/database";
+import { ProductRow, Inventory } from "@/types/database";
 
 interface ProductPageContentProps {
-  product: Product;
+  product: ProductRow & {
+    color_variants?: any[];
+    additional_images?: string[];
+  };
+  initialRecommendations?: any[];
 }
 
 interface HighlightItem {
@@ -34,15 +38,15 @@ interface HighlightItem {
   detail: string;
 }
 
-export default function ProductPageContent({ product }: ProductPageContentProps) {
+export default function ProductPageContent({ product, initialRecommendations = [] }: ProductPageContentProps) {
   const { addToCart } = useCart();
   useAuth();
-  const [inventory, setInventory] = useState<InventoryStatus | null>(null);
+  const [inventory, setInventory] = useState<Inventory | null>(null);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [showSizeHelper, setShowSizeHelper] = useState(false);
   const [reviewsSummary, setReviewsSummary] = useState<{ rating: number; reviews: number } | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<any | null>(
-    product.colorVariants && product.colorVariants.length > 0 ? product.colorVariants[0] : null
+    product.color_variants && product.color_variants.length > 0 ? product.color_variants[0] : null
   );
   const [isAdding, setIsAdding] = useState(false);
 
@@ -57,11 +61,11 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
     trackViewItem({
       itemId: product.id,
       itemName: product.name,
-      price: product.price,
-      category: product.category,
+      price: product.base_price,
+      category: product.category_id || "Uncategorized",
       isKit: false,
     });
-  }, [product.id, product.name, product.price, product.category]);
+  }, [product.id, product.name, product.base_price, product.category_id]);
 
   useEffect(() => {
     const fetchInventory = async () => {
@@ -91,29 +95,39 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
 
   const handleAddToCart = useCallback(() => {
     setIsAdding(true);
-    addToCart(product);
+    // Add legacy fields for compatibility with the Product type expected by addToCart
+    const productForCart = {
+      ...product,
+      price: product.base_price,
+      image: product.image_url || "",
+    } as any;
+    addToCart(productForCart);
     setTimeout(() => setIsAdding(false), 2000);
   }, [addToCart, product]);
 
   const handleBuyNow = useCallback(() => {
-    addToCart(product, false);
+    const productForCart = {
+      ...product,
+      price: product.base_price,
+      image: product.image_url || "",
+    } as any;
+    addToCart(productForCart, false);
   }, [addToCart, product]);
 
   const isOutOfStock = useMemo(() => {
-    if (product.soldOut) return true;
-    return inventory !== null && inventory.available_quantity === 0;
-  }, [inventory, product.soldOut]);
+    return inventory !== null && (inventory.stock_quantity - inventory.reserved_quantity) <= 0;
+  }, [inventory]);
 
   const recommendedProducts = useMemo(
-    () => getFrequentlyBoughtTogetherProducts(product.id),
-    [product.id]
+    () => initialRecommendations,
+    [initialRecommendations]
   );
 
   // benangbaju Fashion Product Content
   const getProductSpecificContent = (productId: string, primaryPromoCode: string, siteSettings: any) => {
     // 1. DYNAMIC HIGHLIGHTS (from CMS metadata)
-    const keyHighlights = product.highlights && product.highlights.length > 0 
-      ? product.highlights 
+    const keyHighlights = (product.key_highlights as any[]) && (product.key_highlights as any[]).length > 0 
+      ? (product.key_highlights as any[]) 
       : [
           { name: "Eco-Friendly", detail: "Menggunakan pewarna alami yang aman bagi lingkungan" },
           { name: "Handmade", detail: "Setiap detail dikerjakan dengan tangan terampil pengrajin lokal" },
@@ -141,7 +155,7 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
               </li>
             </ul>
             <div className="mt-4">
-              <ProductDetailsTable productId={productId} />
+              <ProductDetailsTable productId={productId} highlights={keyHighlights} />
             </div>
           </div>
         ),
@@ -161,9 +175,9 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
                 Bingung Pilih Ukuran?
               </button>
             </div>
-            {product.sizeGuide ? (
+            {product.size_guide ? (
               <div className="text-xs text-brand-softblack/70 whitespace-pre-line leading-relaxed font-mono bg-stone-50 p-4 border border-stone-100 italic">
-                {product.sizeGuide}
+                {product.size_guide}
               </div>
             ) : (
               <div className="text-xs text-brand-softblack/60 italic p-4 bg-stone-50 rounded-sm">
@@ -177,8 +191,8 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
         title: "Instruksi Perawatan",
         content: (
           <div className="space-y-4 text-sm text-brand-softblack/70 leading-relaxed">
-            {product.careInstructions ? (
-              <p className="whitespace-pre-line">{product.careInstructions}</p>
+            {product.care_instructions ? (
+              <p className="whitespace-pre-line">{product.care_instructions}</p>
             ) : (
               <p className="whitespace-pre-line">{siteSettings.productDetailSettings.defaultCareInstructions}</p>
             )}
@@ -219,7 +233,7 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
       <main id="main-content" className="max-w-7xl mx-auto px-4 md:px-6 pt-10 pb-24 md:pt-14 md:pb-32">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           <ProductImageGallery 
-            images={Array.from(new Set([product.image, ...(product.additionalImages || [])]))} 
+            images={Array.from(new Set([product.image_url || "", ...(product.additional_images || [])]))} 
             alt={product.name} 
           />
           
@@ -227,7 +241,7 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <span className="text-[10px] uppercase tracking-[0.3em] font-semibold text-brand-green bg-brand-green/5 px-2 py-1 rounded-sm">
-                  {product.category || "Fashion"}
+                  {product.category_id || "Fashion"}
                 </span>
                 {reviewsSummary && (
                   <div className="flex items-center gap-1.5 text-xs text-brand-softblack/60">
@@ -251,16 +265,16 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
               <div className="flex flex-col gap-1">
                 <div className="flex items-baseline gap-3">
                   <span className="text-3xl font-medium text-brand-softblack">
-                    {formatPrice(selectedVariant?.price ?? product.price)}
+                    {formatPrice(selectedVariant?.price ?? product.base_price)}
                   </span>
-                  {(selectedVariant?.oldPrice ?? product.oldPrice) && (
+                  {(selectedVariant?.old_price) && (
                     <span className="text-lg text-brand-softblack/30 line-through font-light">
-                      {formatPrice(selectedVariant?.oldPrice ?? product.oldPrice)}
+                      {formatPrice(selectedVariant?.old_price)}
                     </span>
                   )}
-                  {((selectedVariant?.oldPrice ?? product.oldPrice) || 0) > (selectedVariant?.price ?? product.price) && (
+                  {(selectedVariant?.old_price || 0) > (selectedVariant?.price ?? product.base_price) && (
                     <span className="ml-1 bg-brand-softblack text-white px-2.5 py-1 text-[10px] uppercase tracking-widest font-semibold rounded-sm">
-                      Hemat {Math.round((((selectedVariant?.oldPrice ?? product.oldPrice ?? 0) - (selectedVariant?.price ?? product.price)) / (selectedVariant?.oldPrice ?? product.oldPrice ?? 1)) * 100)}%
+                      Hemat {Math.round((((selectedVariant?.old_price ?? 0) - (selectedVariant?.price ?? product.base_price)) / (selectedVariant?.old_price ?? 1)) * 100)}%
                     </span>
                   )}
                 </div>
@@ -276,6 +290,10 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
               </div>
             </div>
 
+              <ProductTrustSeals />
+              <ProductShippingCalculator productId={product.id} productPrice={product.base_price} />
+            </div>
+
             <CheckoutBenefitsBar />
 
             <div className="space-y-4 p-6 bg-white shadow-sm border border-stone-100 rounded-sm relative overflow-hidden">
@@ -289,7 +307,7 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
               </div>
 
               {/* Color Selection */}
-              {product.colorVariants && product.colorVariants.length > 0 && (
+              {product.color_variants && product.color_variants.length > 0 && (
                 <div className="space-y-4 py-4 border-y border-stone-100">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack">
@@ -297,7 +315,7 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    {product.colorVariants.map((variant) => (
+                    {product.color_variants.map((variant) => (
                       <button
                         key={variant.color}
                         onClick={() => setSelectedVariant(variant)}
@@ -365,11 +383,7 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
                 >
                   {isOutOfStock ? "Beritahu Saat Tersedia" : "Beli Sekarang"}
                 </button>
-              </div>
-            </div>
-
-            <ProductTrustSeals />
-            <ProductShippingCalculator productId={product.id} productPrice={product.price} />
+          </div>
           </div>
         </div>
 
@@ -382,7 +396,11 @@ export default function ProductPageContent({ product }: ProductPageContentProps)
               <ProductAccordion items={accordionItems} />
             </div>
             
-            <ProductValueProposition product={product} />
+            <ProductValueProposition product={{
+              ...product,
+              price: product.base_price,
+              image: product.image_url || "",
+            } as any} />
           </div>
           
           <div className="lg:col-span-4 space-y-6">

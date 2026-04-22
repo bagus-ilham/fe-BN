@@ -16,7 +16,7 @@ const CHECKOUT_ADDRESS_STORAGE_KEY = "benangbaju_checkout_address";
 
 import { CheckoutFormData } from "@/types/checkout";
 
-export interface UseCheckoutFormStateOptions {
+interface UseCheckoutFormStateOptions {
   initialEmail?: string;
   onZIPChange?: (zip: string) => void;
 }

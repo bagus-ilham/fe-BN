@@ -1,7 +1,7 @@
 /**
  * Memformat error Supabase agar mudah ditampilkan ke pengguna
  */
-export interface SupabaseError {
+interface SupabaseError {
   message?: string;
   details?: string;
   hint?: string;

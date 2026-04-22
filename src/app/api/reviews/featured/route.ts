@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getClientIp } from "@/utils/rate-limit";
-import { getSupabaseAdmin } from "@/utils/supabase";
+import { getFeaturedReviews } from "@/lib/review-service";
+import { API_ERROR_MESSAGES } from "@/constants/api-messages";
 
 /**
  * GET /api/reviews/featured
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
   const rl = rateLimit(getClientIp(req), { limit: 30, windowMs: 60_000 });
   if (!rl.success) {
     return NextResponse.json(
-      { error: "Too many requests" },
+      { error: API_ERROR_MESSAGES.TOO_MANY_REQUESTS },
       {
         status: 429,
         headers: {
@@ -23,28 +24,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const supabase = getSupabaseAdmin();
-
-    const { data, error } = await supabase
-      .from("reviews")
-      .select("id, product_id, rating, text, author_name, created_at")
-      .eq("status", "approved")
-      .order("created_at", { ascending: false })
-      .limit(6);
-
-    if (error) {
-      console.error("[REVIEWS FEATURED] Error:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch reviews" },
-        { status: 500 }
-      );
-    }
-
+    const data = await getFeaturedReviews(6);
     return NextResponse.json(data ?? []);
   } catch (e) {
     console.error("[REVIEWS FEATURED] Error:", e);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR },
       { status: 500 }
     );
   }

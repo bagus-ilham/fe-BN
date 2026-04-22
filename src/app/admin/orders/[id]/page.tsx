@@ -18,62 +18,33 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 
-// Mock Data for Order Detail
-const MOCK_ORDER = {
-  id: "ord-12345678",
-  created_at: new Date(Date.now() - 3600000).toISOString(),
-  status: "paid",
-  customer: {
-    name: "Andi Pratama",
-    email: "andi@example.com",
-    phone: "+62 812 3456 7890",
-    address: {
-      street: "Jl. Sudirman No. 45",
-      city: "Jakarta Selatan",
-      state: "DKI Jakarta",
-      zip: "12345",
-      country: "Indonesia"
-    }
-  },
-  items: [
-    {
-      id: "prod_2",
-      name: "Atasan Linen Elegan",
-      image: "/images/products/linen-atasan.png",
-      variant: "Oatmeal / Size M",
-      quantity: 2,
-      price: 259000
-    },
-    {
-      id: "prod_1",
-      name: "Dress Midi Batik Modern",
-      image: "/images/products/batik-dress.png",
-      variant: "Deep Forest / Size S",
-      quantity: 1,
-      price: 389000
-    }
-  ],
-  logistics: {
-    method: "JNE Reguler",
-    cost: 20000,
-    tracking_code: null as string | null
-  },
-  payment: {
-    method: "Midtrans (Virtual Account)",
-    subtotal: 907000,
-    shipping_cost: 20000,
-    discount: 50000,
-    total: 877000
-  }
-};
+import { getOrderById, updateOrderStatus } from "@/lib/order-service";
 
 export default function OrderDetailPage() {
   const params = useParams();
+  const orderId = params.id as string;
   const router = useRouter();
-  const [order, setOrder] = useState(MOCK_ORDER);
-  const [newStatus, setNewStatus] = useState(order.status);
+  const [order, setOrder] = useState<any>(null);
+  const [newStatus, setNewStatus] = useState("");
   const [trackingCode, setTrackingCode] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchOrder() {
+      if (!orderId) return;
+      setIsLoading(true);
+      const data = await getOrderById(orderId);
+      if (data) {
+        setOrder(data);
+        const typedData = data as { status?: string; shipments?: Array<{ tracking_number?: string | null }> };
+        setNewStatus(typedData.status ?? "pending");
+        setTrackingCode(typedData.shipments?.[0]?.tracking_number || "");
+      }
+      setIsLoading(false);
+    }
+    fetchOrder();
+  }, [orderId]);
 
   const statusColors: any = {
     pending: "text-amber-500 bg-amber-50 border-amber-100",
@@ -83,13 +54,43 @@ export default function OrderDetailPage() {
     cancelled: "text-red-600 bg-red-50 border-red-100"
   };
 
-  const handleUpdateStatus = () => {
+  const handleUpdateStatus = async () => {
     setIsUpdating(true);
-    setTimeout(() => {
-      setOrder({...order, status: newStatus, logistics: {...order.logistics, tracking_code: trackingCode || order.logistics.tracking_code}});
+    try {
+      await updateOrderStatus(orderId, newStatus, trackingCode);
+      const updatedOrder = await getOrderById(orderId);
+      setOrder(updatedOrder);
+      router.refresh();
+    } catch (err) {
+      console.error("Gagal memperbarui pesanan:", err);
+      alert("Gagal memperbarui pesanan.");
+    } finally {
       setIsUpdating(false);
-    }, 1000);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Clock size={24} className="animate-spin text-brand-green" />
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-brand-softblack/40 uppercase tracking-widest text-xs">Pesanan tidak ditemukan</p>
+        <Link href="/admin/orders" className="text-brand-green text-[10px] uppercase tracking-widest mt-4 inline-block hover:underline">Kembali</Link>
+      </div>
+    );
+  }
+
+  const customer = order.profiles || {};
+  const payment = order.payment_transactions?.[0] || {};
+  const shipment = order.shipments?.[0] || {};
+  const subtotalAmount =
+    order.order_items?.reduce((acc: number, item: any) => acc + (item.price || 0) * (item.quantity || 0), 0) || 0;
 
   return (
     <div className="max-w-6xl mx-auto pb-24">
@@ -137,22 +138,29 @@ export default function OrderDetailPage() {
               <h3 className="text-[11px] uppercase tracking-[0.2em] font-semibold text-brand-softblack">Produk yang Dipesan</h3>
             </div>
             <div className="divide-y divide-stone-50">
-              {order.items.map((item, idx) => (
+              {order.order_items?.map((item: any, idx: number) => (
                 <div key={idx} className="p-6 flex items-center gap-6 group">
                   <div className="relative w-20 h-24 bg-brand-offwhite border border-stone-100 rounded-sm overflow-hidden shrink-0">
-                    <Image src={item.image} alt={item.name} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <Image 
+                      src={item.product_variants?.image_url || "/images/products/glow.jpeg"} 
+                      alt={item.product_variants?.products?.name || "Produk"} 
+                      fill 
+                      className="object-cover group-hover:scale-105 transition-transform duration-700" 
+                    />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <h4 className="text-sm font-medium text-brand-softblack">{item.name}</h4>
-                    <p className="text-[10px] uppercase tracking-widest text-brand-softblack/40">{item.variant}</p>
+                    <h4 className="text-sm font-medium text-brand-softblack">{item.product_variants?.products?.name}</h4>
+                    <p className="text-[10px] uppercase tracking-widest text-brand-softblack/40">
+                      {item.product_variants?.color_name} / Size {item.product_variants?.size}
+                    </p>
                     <div className="flex items-center gap-6 mt-2">
                        <span className="text-xs text-brand-softblack/60">Qty: {item.quantity}</span>
-                       <span className="text-xs font-semibold text-brand-softblack">Rp {item.price.toLocaleString('id-ID')}</span>
+                       <span className="text-xs font-semibold text-brand-softblack">Rp {(item.price || 0).toLocaleString('id-ID')}</span>
                     </div>
                   </div>
                   <div className="text-right sr-only md:not-sr-only">
                     <p className="text-sm font-medium text-brand-softblack">
-                      Rp {(item.price * item.quantity).toLocaleString('id-ID')}
+                      Rp {((item.price || 0) * (item.quantity || 0)).toLocaleString('id-ID')}
                     </p>
                   </div>
                 </div>
@@ -162,21 +170,21 @@ export default function OrderDetailPage() {
                <div className="max-w-xs ml-auto space-y-4">
                   <div className="flex justify-between text-xs text-brand-softblack/50">
                     <span>Subtotal</span>
-                    <span>Rp {order.payment.subtotal.toLocaleString('id-ID')}</span>
+                    <span>Rp {subtotalAmount.toLocaleString('id-ID')}</span>
                   </div>
                   <div className="flex justify-between text-xs text-brand-softblack/50">
                     <span>Biaya Pengiriman</span>
-                    <span>Rp {order.payment.shipping_cost.toLocaleString('id-ID')}</span>
+                    <span>Rp {order.shipping_amount.toLocaleString('id-ID')}</span>
                   </div>
-                  {order.payment.discount > 0 && (
+                  {order.discount_amount > 0 && (
                     <div className="flex justify-between text-xs text-brand-sale-red">
                       <span>Diskon Promo</span>
-                      <span>- Rp {order.payment.discount.toLocaleString('id-ID')}</span>
+                      <span>- Rp {order.discount_amount.toLocaleString('id-ID')}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-base font-semibold text-brand-softblack pt-4 border-t border-stone-200">
                     <span>Total</span>
-                    <span>Rp {order.payment.total.toLocaleString('id-ID')}</span>
+                    <span>Rp {order.total_amount.toLocaleString('id-ID')}</span>
                   </div>
                </div>
             </div>
@@ -196,12 +204,19 @@ export default function OrderDetailPage() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] uppercase tracking-widest text-blue-400 font-bold">Nomor Resi Tersedia</p>
-                      <p className="text-lg font-mono font-bold text-blue-900">{order.logistics.tracking_code || 'BB-ID-12345678'}</p>
-                      <p className="text-[10px] text-blue-800 opacity-60 uppercase tracking-widest italic">{order.logistics.method}</p>
+                      <p className="text-lg font-mono font-bold text-blue-900">{shipment.tracking_number || 'SEDANG DIPROSES'}</p>
+                      <p className="text-[10px] text-blue-800 opacity-60 uppercase tracking-widest italic">{shipment.courier_company}</p>
                     </div>
-                    <button className="ml-auto flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-blue-700 hover:text-blue-900 transition-colors">
-                      Lacak <ExternalLink size={12} />
-                    </button>
+                    {shipment.tracking_number && (
+                      <a
+                        href={`https://www.google.com/search?q=${encodeURIComponent(`cek resi ${shipment.courier_company || ""} ${shipment.tracking_number}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-auto flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-blue-700 hover:text-blue-900 transition-colors"
+                      >
+                        Lacak <ExternalLink size={12} />
+                      </a>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
@@ -231,15 +246,15 @@ export default function OrderDetailPage() {
               <div className="space-y-6">
                  <div>
                     <label className="text-[9px] uppercase tracking-widest opacity-40 block mb-1">Nama Lengkap</label>
-                    <p className="text-sm font-light">{order.customer.name}</p>
+                    <p className="text-sm font-light">{customer.full_name || 'Pelanggan Anonim'}</p>
                  </div>
                  <div>
                     <label className="text-[9px] uppercase tracking-widest opacity-40 block mb-1">Email</label>
-                    <p className="text-sm font-light lowercase">{order.customer.email}</p>
+                    <p className="text-sm font-light lowercase">{customer.email || order.customer_email || '-'}</p>
                  </div>
                  <div>
                     <label className="text-[9px] uppercase tracking-widest opacity-40 block mb-1">No. Handphone</label>
-                    <p className="text-sm font-light">{order.customer.phone}</p>
+                    <p className="text-sm font-light">{customer.phone || '-'}</p>
                  </div>
               </div>
 
@@ -250,10 +265,10 @@ export default function OrderDetailPage() {
                  </div>
                  <div className="space-y-4">
                     <p className="text-sm font-light leading-relaxed opacity-80">
-                      {order.customer.address.street}<br />
-                      {order.customer.address.city}, {order.customer.address.state}<br />
-                      {order.customer.address.zip}<br />
-                      {order.customer.address.country}
+                      {order.shipping_street || 'Alamat tidak tersedia'}<br />
+                      {order.shipping_city || '-'}, {order.shipping_state || '-'}<br />
+                      {order.shipping_zip || '-'}<br />
+                      Indonesia
                     </p>
                     <button className="flex items-center gap-2 text-[9px] uppercase tracking-widest font-bold text-brand-green hover:underline">
                       Lihat di Google Maps <ExternalLink size={10} />
@@ -267,7 +282,7 @@ export default function OrderDetailPage() {
                     <h3 className="text-[11px] uppercase tracking-[0.3em] font-light">Metode Pembayaran</h3>
                  </div>
                  <p className="text-[10px] uppercase tracking-[0.2em] font-medium bg-white/5 py-4 px-4 text-center border border-white/10">
-                    {order.payment.method}
+                    {payment.payment_type || 'PENDING'}
                  </p>
               </div>
            </div>

@@ -159,21 +159,6 @@ export function trackRemoveFromCart(params: {
   });
 }
 
-/** Payment information added (e.g. user saw QR PIX) — add_payment_info funnel */
-export function trackAddPaymentInfo(params: {
-  value: number;
-  paymentMethod: "pix" | "card";
-  items: Array<{ id: string; name: string; price: number; quantity: number; category?: string }>;
-}): void {
-  if (!isAvailable()) return;
-  window.gtag!("event", "add_payment_info", {
-    currency: "IDR",
-    value: params.value,
-    payment_type: params.paymentMethod,
-    items: toGA4Items(params.items),
-  });
-}
-
 /** Mulai checkout */
 export function trackBeginCheckout(params: {
   value: number;

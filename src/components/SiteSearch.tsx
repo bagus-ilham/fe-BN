@@ -12,45 +12,12 @@ import {
   X,
   ArrowRight
 } from "lucide-react";
-import { PRODUCTS, Product } from "@/constants/products";
+import { supabase } from "@/utils/supabase";
 import { formatPrice } from "@/utils/format";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
-const productKeywords: Record<string, string[]> = {
-  prod_1: ["batik", "koleksi raya", "tradisional", "modern", "etnik", "midi dress", "pesta", "kondangan"],
-  prod_2: ["denim", "jaket", "jeans", "casual", "outerwear", "biru", "oversized", "streetwear"],
-  prod_3: ["plisket", "rok", "skirt", "midi", "formal", "hijab friendly", "elegan", "kantor"],
-  prod_4: ["linen", "blouse", "atasan", "kemeja", "adem", "minimalis", "oatmeal", "sage"],
-  prod_5: ["knit", "rajut", "cardigan", "outer", "hangat", "lembut", "premium", "layering"],
-};
-
-function searchProducts(query: string): Product[] {
-  if (!query.trim()) return [];
-
-  const searchTerm = query.toLowerCase().trim();
-  const searchWords = searchTerm.split(/\s+/);
-
-  return PRODUCTS.filter((product) => {
-    const nameMatch = product.name.toLowerCase().includes(searchTerm);
-    const descriptionMatch = product.description.toLowerCase().includes(searchTerm);
-    const keywords = productKeywords[product.id] || [];
-    const keywordMatch = keywords.some(
-      (keyword) =>
-        keyword.toLowerCase().includes(searchTerm) ||
-        searchWords.some((word) => keyword.toLowerCase().includes(word)),
-    );
-    const wordMatch = searchWords.every(
-      (word) =>
-        product.name.toLowerCase().includes(word) ||
-        product.description.toLowerCase().includes(word) ||
-        keywords.some((keyword) => keyword.toLowerCase().includes(word)),
-    );
-
-    return nameMatch || descriptionMatch || keywordMatch || wordMatch;
-  });
-}
 
 const quickLinks = [
   { href: "/", label: "Beranda", icon: Home },
@@ -63,12 +30,34 @@ const quickLinks = [
 export default function SiteSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [products, setProducts] = useState<any[]>([]);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (open && products.length === 0) {
+      const fetchProducts = async () => {
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .is("deleted_at", null)
+          .eq("is_active", true);
+        
+        if (data) setProducts(data);
+      };
+      fetchProducts();
+    }
+  }, [open, products.length]);
+
   const searchResults = useMemo(() => {
-    return searchProducts(query);
-  }, [query]);
+    if (!query.trim()) return [];
+    const term = query.toLowerCase();
+    return products.filter(p => 
+      p.name.toLowerCase().includes(term) || 
+      (p.description && p.description.toLowerCase().includes(term)) ||
+      (p.tagline && p.tagline.toLowerCase().includes(term))
+    );
+  }, [query, products]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -241,7 +230,7 @@ export default function SiteSearch() {
                               >
                                 <div className="relative w-16 h-20 shrink-0 rounded-lg overflow-hidden bg-brand-champagne">
                                   <Image
-                                    src={product.image}
+                                    src={product.image_url || "/images/products/placeholder.png"}
                                     alt={product.name}
                                     fill
                                     className="object-cover group-hover:scale-110 transition-transform duration-700 ease-in-out"
@@ -257,7 +246,7 @@ export default function SiteSearch() {
                                   </div>
                                 </div>
                                 <div className="text-xs font-medium text-brand-softblack shrink-0 pr-2">
-                                  {formatPrice(product.price)}
+                                  {formatPrice(product.base_price)}
                                 </div>
                               </Link>
                             </motion.div>

@@ -25,6 +25,8 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 
 import { useSiteSettings } from "@/context/SiteSettingsContext";
+import { saveSiteSettings } from "@/lib/cms-service";
+import { useEffect } from "react";
 
 export default function AdminSettingsPage() {
   const { settings: globalSettings, updateSettings } = useSiteSettings();
@@ -50,16 +52,47 @@ export default function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const [newCategory, setNewCategory] = useState("");
 
-  const handleSave = () => {
+  useEffect(() => {
+    setSettings({
+      store_name: globalSettings.storeName,
+      marquee_text: globalSettings.marqueeText.join(" • "),
+      free_shipping_threshold: globalSettings.freeShippingThreshold,
+      primary_promo_code: globalSettings.primaryPromoCode,
+      categories: globalSettings.categories || [],
+      collections: globalSettings.collections || [],
+      stats: globalSettings.brandStats,
+      contact: globalSettings.contactInfo,
+      social: globalSettings.socialLinks,
+      hero_slides: globalSettings.heroSlides,
+      banners: globalSettings.homepageBanners,
+      product_policies: globalSettings.productDetailSettings
+    });
+  }, [globalSettings]);
+
+  const handleSave = async () => {
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const payload = {
+        store_name: settings.store_name,
+        marquee_text: settings.marquee_text.split(" • "),
+        free_shipping_threshold: settings.free_shipping_threshold,
+        primary_promo_code: settings.primary_promo_code,
+        brand_stats: settings.stats,
+        contact_info: settings.contact,
+        social_links: settings.social,
+        hero_slides: settings.hero_slides,
+        homepage_banners: settings.banners,
+        product_detail_settings: settings.product_policies,
+        navigation: globalSettings.navigation
+      };
+
+      await saveSiteSettings(payload);
+
       updateSettings({
         storeName: settings.store_name,
-        marqueeText: settings.marquee_text.split(" • "),
+        marqueeText: payload.marquee_text,
         freeShippingThreshold: settings.free_shipping_threshold,
         primaryPromoCode: settings.primary_promo_code,
-        categories: settings.categories,
-        collections: settings.collections,
         brandStats: settings.stats,
         contactInfo: settings.contact,
         socialLinks: settings.social,
@@ -67,10 +100,15 @@ export default function AdminSettingsPage() {
         homepageBanners: settings.banners,
         productDetailSettings: settings.product_policies
       });
-      setLoading(false);
+      
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    }, 1200);
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      alert("Gagal menyimpan pengaturan ke database.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateHeroSlide = (index: number, field: string, value: string) => {

@@ -51,20 +51,7 @@ export async function hashEmail(email: string): Promise<string> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Constant to simulate success
-const MOCK_MODE = true;
-
-/** Event lihat produk atau kit. */
-export function fbTrackViewContent(params: {
-  contentId: string;
-  contentName: string;
-  contentType?: string;
-  value: number;
-}): void {
-  if (MOCK_MODE) {
-    console.log(`[MOCK PIXEL] ViewContent: ${params.contentName}`, params);
-    return;
-  }
-}
+const MOCK_MODE = process.env.NODE_ENV === 'development';
 
 /** Event tambah ke keranjang. */
 export function fbTrackAddToCart(params: {
@@ -77,6 +64,14 @@ export function fbTrackAddToCart(params: {
     console.log(`[MOCK PIXEL] AddToCart: ${params.contentName}`, params);
     return;
   }
+  if (!isAvailable()) return;
+  window.fbq!("track", "AddToCart", {
+    content_ids: [params.contentId],
+    content_name: params.contentName,
+    content_type: "product",
+    value: params.value,
+    currency: "IDR",
+  });
 }
 
 /** Event mulai checkout. */
@@ -89,6 +84,13 @@ export function fbTrackInitiateCheckout(params: {
     console.log(`[MOCK PIXEL] InitiateCheckout`, params);
     return;
   }
+  if (!isAvailable()) return;
+  window.fbq!("track", "InitiateCheckout", {
+    value: params.value,
+    currency: "IDR",
+    num_items: params.numItems,
+    content_ids: params.contentIds,
+  });
 }
 
 /** Purchase completed. */
@@ -102,5 +104,26 @@ export async function fbTrackPurchase(params: {
   if (MOCK_MODE) {
     console.log(`[MOCK PIXEL] Purchase: ${params.transactionId}`, params);
     return;
+  }
+  if (!isAvailable()) return;
+
+  // Hashed email for Advanced Matching if available
+  if (params.email) {
+    const hashedEmail = await hashEmail(params.email);
+    window.fbq!("track", "Purchase", {
+      value: params.value,
+      currency: "IDR",
+      transaction_id: params.transactionId,
+      content_ids: params.contentIds,
+      num_items: params.numItems,
+    }, { em: hashedEmail });
+  } else {
+    window.fbq!("track", "Purchase", {
+      value: params.value,
+      currency: "IDR",
+      transaction_id: params.transactionId,
+      content_ids: params.contentIds,
+      num_items: params.numItems,
+    });
   }
 }

@@ -7,26 +7,42 @@ import { createBrowserClient } from '@supabase/ssr'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const supabase = useMemo<any>(() => {
-    try {
-      return createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-    } catch {
-      return null
-    }
+  
+  const supabase = useMemo(() => {
+    return createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
   }, [])
 
-  // useEffect removed to avoid cascading renders since loading is false by default
+  useEffect(() => {
+    const fetchSession = async () => {
+      setLoading(true)
+      const { data: { session } } = await supabase.auth.getSession()
+      setUser(session?.user ?? null)
+      setLoading(false)
+    }
 
+    fetchSession()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase])
 
   const signOut = async () => {
-    // signOut login commented out
-    
-    console.log('Mock signout');
+    setLoading(true)
+    await supabase.auth.signOut()
+    setUser(null)
+    setLoading(false)
+    router.push('/')
   }
 
   return {
