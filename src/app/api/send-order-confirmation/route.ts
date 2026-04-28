@@ -15,8 +15,6 @@ interface OrderConfirmationBody {
     product_image?: string | null;
   }>;
   status?: "Paid" | "Processing" | "Pending";
-  pixCopyPaste?: string | null;
-  pixInstructions?: string | null;
   orderUrl?: string;
 }
 
@@ -46,8 +44,6 @@ export async function POST(req: NextRequest) {
       totalAmount: data.totalAmount,
       status: data.status ?? "Paid",
       items: data.items,
-      pixCopyPaste: data.pixCopyPaste ?? null,
-      pixInstructions: data.pixInstructions ?? null,
       orderUrl: data.orderUrl,
     });
 

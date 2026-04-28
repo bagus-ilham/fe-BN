@@ -11,19 +11,20 @@ import {
 } from "@/lib/checkout-config";
 import type { PaymentMethod, InstallmentOption } from "@/types/checkout";
 import { formatPrice } from "@/utils/format";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 
 interface CheckoutOrderSummaryProps {
   paymentMethod: PaymentMethod | null;
   installmentOption?: InstallmentOption | null;
   onPaymentMethodChange?: (method: PaymentMethod) => void;
   onInstallmentChange?: (option: InstallmentOption) => void;
-  /** Se true, mostra seletor de pagamento; se false, só mostra totais */
+  /** Jika true, tampilkan selector metode pembayaran; jika false, hanya tampilkan total */
   showPaymentSelector?: boolean;
-  /** Valor do frete (IDR). */
+  /** Biaya pengiriman (IDR). */
   shippingReais?: number;
-  /** Se true, exibe "Grátis" no frete */
+  /** Jika true, tampilkan teks "Gratis" di baris ongkos kirim */
   isFreeShipping?: boolean;
-  /** Código do cupom (ex: BENANG10). */
+  /** Kode kupon yang digunakan (contoh: BENANG10). */
   couponCode?: string;
   className?: string;
 }
@@ -40,6 +41,8 @@ export default function CheckoutOrderSummary({
   className = "",
 }: CheckoutOrderSummaryProps) {
   const { cart, totalPrice } = useCart();
+  const { settings } = useSiteSettings();
+  const waNumber = settings.contactInfo.whatsapp || "6285001001234";
   
   const isFreeShipping =
     isFreeShippingProp ?? totalPrice >= FREE_SHIPPING_THRESHOLD;
@@ -148,7 +151,7 @@ export default function CheckoutOrderSummary({
         <p className="pt-3 text-[10px] uppercase tracking-wider text-brand-softblack/60 text-center font-light">
           Ada pertanyaan?{" "}
           <a
-            href="https://wa.me/6281234567890?text=Halo%20benangbaju,%20saya%20ingin%20bertanya%20tentang%20pesanan%20saya."
+            href={`https://wa.me/${waNumber}?text=${encodeURIComponent('Halo benangbaju, saya ingin bertanya tentang pesanan saya.')}`}
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-brand-green hover:text-brand-softblack transition-colors"

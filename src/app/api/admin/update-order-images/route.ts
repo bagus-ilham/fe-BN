@@ -5,9 +5,9 @@ import { internalError, ok, unauthorized } from "@/lib/http/api-response";
 import { API_ERROR_MESSAGES, orderImagesUpdatedMessage } from "@/constants/api-messages";
 
 /**
- * API Route para atualizar imagens de produtos em pedidos antigos.
- * Atualiza order_items sem product_image buscando na constante PRODUCTS.
- * Protegida por ADMIN_SECRET_TOKEN (header x-admin-token).
+ * API Route untuk memperbarui gambar produk pada pesanan lama.
+ * Memperbarui order_items yang tidak memiliki product_image.
+ * Dilindungi oleh ADMIN_SECRET_TOKEN (header x-admin-token).
  */
 
 // Remove legacy PRODUCTS import
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const expectedToken = process.env.ADMIN_SECRET_TOKEN;
 
     if (!expectedToken) {
-      console.warn("[ADMIN] ADMIN_SECRET_TOKEN não configurado — rota bloqueada");
+      console.warn("[ADMIN] ADMIN_SECRET_TOKEN belum dikonfigurasi — akses ditolak");
       return unauthorized();
     }
 
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
                     process.env.NEXT_PUBLIC_BASE_URL || 
-                    'https://vioslabs.com.br';
+                    'https://benangbaju.com';
 
     const result = await updateMissingOrderItemImages(baseUrl);
     if (!result.ok) {
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET para verificar quantos itens precisam ser atualizados
+// GET untuk mengecek berapa banyak item yang perlu diperbarui
 export async function GET() {
   try {
     const result = await countOrderItemsWithoutImage();

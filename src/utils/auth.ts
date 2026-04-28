@@ -66,7 +66,7 @@ export async function checkAuth(): Promise<{ user: User | null; error: string | 
 }
 
 /**
- * Solicitar redefinição de senha
+ * Meminta reset password via email
  */
 export async function requestPasswordReset(email: string): Promise<{ success: boolean; error?: string }> {
   try {

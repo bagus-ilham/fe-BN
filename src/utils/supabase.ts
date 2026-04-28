@@ -27,13 +27,6 @@ export function getSupabaseAdmin() {
     );
   }
 
-  if (process.env.NODE_ENV === 'development') {
-    const key = supabaseServiceRoleKey || "";
-    console.log(`[SUPABASE ADMIN] URL: ${supabaseUrl}`);
-    console.log(`[SUPABASE ADMIN] Key Length: ${key.length}`);
-    console.log(`[SUPABASE ADMIN] Key Prefix: ${key.substring(0, 10)}...`);
-    console.log(`[SUPABASE ADMIN] Key Suffix: ...${key.substring(key.length - 10)}`);
-  }
 
   return createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {

@@ -1,4 +1,3 @@
-import { supabase } from "@/utils/supabase";
 import { getSupabaseAdmin } from "@/utils/supabase";
 
 /**
@@ -38,7 +37,7 @@ export async function submitReview(params: SubmitReviewParams): Promise<{ succes
 }
 
 export async function listAllReviewsForAdmin() {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseAdmin()
     .from("reviews")
     .select(`
       *,
@@ -55,7 +54,7 @@ export async function listAllReviewsForAdmin() {
 }
 
 export async function updateReviewStatus(reviewId: string, status: 'approved' | 'rejected' | 'pending') {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseAdmin()
     .from("reviews")
     .update({ status })
     .eq("id", reviewId)

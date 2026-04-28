@@ -3,8 +3,32 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { ChevronRight, Home } from "lucide-react";
+import { ChevronRight, Home, Search, Bell, ExternalLink } from "lucide-react";
 import { usePathname } from "next/navigation";
+
+const segmentLabels: Record<string, string> = {
+  admin: "Dashboard",
+  products: "Produk",
+  categories: "Kategori",
+  collections: "Koleksi",
+  kits: "Paket (Kits)",
+  inventory: "Inventaris",
+  logs: "Log Aktivitas",
+  orders: "Pesanan",
+  returns: "Retur",
+  "abandoned-carts": "Keranjang Terabaikan",
+  discounts: "Diskon & Promo",
+  "flash-sales": "Flash Sales",
+  waitlist: "Waitlist",
+  loyalty: "Loyalty & VIP",
+  automation: "Otomasi Email",
+  homepage: "Beranda",
+  content: "Halaman CMS",
+  reviews: "Ulasan",
+  customers: "Pelanggan",
+  settings: "Pengaturan",
+  new: "Baru",
+};
 
 export default function AdminLayoutClient({
   children,
@@ -15,42 +39,47 @@ export default function AdminLayoutClient({
   const pathname = usePathname();
 
   const breadcrumbs = useMemo(() => {
-    const segments = pathname.split('/').filter(Boolean);
+    const segments = pathname.split("/").filter(Boolean);
     if (segments.length === 1) return [{ label: "Dashboard", href: "/admin" }];
-    
+
     return segments.map((segment, index) => {
-      const href = `/${segments.slice(0, index + 1).join('/')}`;
-      return {
-        label: segment.charAt(0).toUpperCase() + segment.slice(1),
-        href
-      };
+      const href = `/${segments.slice(0, index + 1).join("/")}`;
+      const label = segmentLabels[segment] || segment.charAt(0).toUpperCase() + segment.slice(1);
+      return { label, href };
     });
   }, [pathname]);
 
+  const currentPageLabel = breadcrumbs[breadcrumbs.length - 1]?.label || "Dashboard";
+
   return (
-    <div className="flex bg-brand-offwhite text-brand-softblack relative">
+    <div className="flex bg-[#F4F2EF] text-brand-softblack relative min-h-screen">
       <AdminSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {/* Top Navbar Admin */}
-        <header className="h-[72px] bg-brand-offwhite/95 backdrop-blur-xl border-b border-brand-champagne flex items-center justify-between px-8 sticky top-0 z-40 shadow-sm">
-          {/* Top Gold Accent */}
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-brand-gold/60 via-brand-gold to-brand-gold/60" />
+        <header className="h-[72px] bg-white border-b border-brand-softblack/[0.06] flex items-center justify-between px-6 sticky top-0 z-40 shadow-[0_1px_12px_rgba(28,28,28,0.05)]">
+          {/* Top gold accent */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-brand-gold/50 via-brand-gold to-brand-gold/50" />
 
-          <div className="flex items-center gap-3">
-            <Link href="/admin" className="text-brand-softblack/30 hover:text-brand-softblack transition-colors">
-              <Home size={14} />
+          {/* Left: Breadcrumbs */}
+          <div className="flex items-center gap-2 min-w-0">
+            <Link 
+              href="/admin" 
+              className="p-1.5 rounded-lg text-brand-softblack/30 hover:text-brand-softblack hover:bg-brand-offwhite transition-colors flex-shrink-0"
+              title="Dashboard"
+            >
+              <Home size={15} />
             </Link>
-            
-            {breadcrumbs.map((crumb, idx) => (
-              <div key={crumb.href} className="flex items-center gap-3">
-                <ChevronRight size={12} className="text-brand-softblack/25" />
-                <Link 
+
+            {breadcrumbs.length > 1 && breadcrumbs.map((crumb, idx) => (
+              <div key={crumb.href} className="flex items-center gap-2 min-w-0">
+                <ChevronRight size={11} className="text-brand-softblack/20 flex-shrink-0" />
+                <Link
                   href={crumb.href}
-                  className={`text-[10px] uppercase tracking-[0.2em] font-medium transition-colors ${
-                    idx === breadcrumbs.length - 1 
-                      ? "text-brand-softblack" 
-                      : "text-brand-softblack/40 hover:text-brand-softblack"
+                  className={`text-[10px] uppercase tracking-[0.18em] font-medium transition-colors truncate ${
+                    idx === breadcrumbs.length - 1
+                      ? "text-brand-softblack"
+                      : "text-brand-softblack/35 hover:text-brand-softblack"
                   }`}
                 >
                   {crumb.label}
@@ -59,29 +88,57 @@ export default function AdminLayoutClient({
             ))}
           </div>
 
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-3 pr-5 border-r border-brand-champagne">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-green opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-green"></span>
+          {/* Right: Actions */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Store preview link */}
+            <Link
+              href="/"
+              target="_blank"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] uppercase tracking-[0.2em] text-brand-softblack/40 hover:text-brand-softblack hover:bg-brand-offwhite transition-all border border-brand-softblack/8"
+            >
+              <ExternalLink size={11} />
+              Lihat Toko
+            </Link>
+
+            {/* Live indicator */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-offwhite border border-brand-softblack/[0.06]">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
               </span>
-              <span className="text-[9px] text-brand-softblack/55 uppercase tracking-widest">Live</span>
+              <span className="text-[9px] text-brand-softblack/50 uppercase tracking-widest hidden sm:inline">Live</span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex flex-col text-right">
-                <span className="text-[10px] font-bold text-brand-softblack uppercase tracking-widest">Admin</span>
-                <span className="text-[9px] text-brand-softblack/40 uppercase tracking-widest">Store Manager</span>
+            {/* Divider */}
+            <div className="w-px h-5 bg-brand-softblack/10" />
+
+            {/* Avatar */}
+            <div className="flex items-center gap-2.5">
+              <div className="flex flex-col text-right hidden sm:flex">
+                <span className="text-[10px] font-bold text-brand-softblack uppercase tracking-widest leading-none">Admin</span>
+                <span className="text-[8px] text-brand-softblack/35 uppercase tracking-widest mt-0.5">Store Manager</span>
               </div>
-              <div className="w-8 h-8 rounded-full bg-brand-softblack flex items-center justify-center text-white text-[10px] font-bold shadow-md ring-2 ring-brand-champagne">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-softblack to-brand-softblack/80 flex items-center justify-center text-white text-[9px] font-bold shadow-md ring-2 ring-brand-champagne">
                 BB
               </div>
             </div>
           </div>
         </header>
 
-        {/* Dynamic Page Content */}
-        <main className="p-8 md:p-12 bg-brand-offwhite">
+        {/* Page Content */}
+        <main className="flex-1 p-6 md:p-8 lg:p-10">
+          {/* Page title strip */}
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <p className="text-[9px] uppercase tracking-[0.3em] text-brand-softblack/30 mb-1">
+                benangbaju · Admin
+              </p>
+              <h1 className="text-xl font-light text-brand-softblack tracking-tight">
+                {currentPageLabel}
+              </h1>
+            </div>
+          </div>
+
           {children}
         </main>
       </div>

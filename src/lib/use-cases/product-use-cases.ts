@@ -45,6 +45,8 @@ function mapProductColors(product: ProductForUI) {
 export function mapProductListForUI(products: ProductForUI[]): ProductWithExtras[] {
   return products.map((p) => ({
     ...p,
+    price: p.base_price,
+    image: p.image_url || "/images/products/glow.jpeg",
     color_variants: mapProductColors(p),
   }));
 }
@@ -67,6 +69,8 @@ export async function getMappedProductById(id: string) {
 
   return {
     ...typedData,
+    price: typedData.base_price,
+    image: typedData.image_url || "/images/products/glow.jpeg",
     color_variants: mapProductColors(typedData),
     additional_images: images,
     available_quantity: totalStock,

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useCart } from "@/context/CartContext";
+import { useSiteSettings } from "@/context/SiteSettingsContext";
 import Link from "next/link";
 import { User } from "@supabase/supabase-js";
 import Avatar from "@/components/ui/Avatar";
@@ -8,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 function MobileMenu() {
   const { isMenuOpen, setIsMenuOpen } = useCart();
+  const { settings } = useSiteSettings();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<{
     full_name: string | null;
@@ -66,15 +68,25 @@ function MobileMenu() {
     setIsMenuOpen(false);
   }, [setIsMenuOpen]);
 
-  const menuItems = useMemo(
-    () => [
+  // Dynamic menu from DB via SiteSettingsContext
+  const menuItems = useMemo(() => {
+    const navMain = settings.navigation?.main || [];
+    const staticItems = [
       { href: "/", label: "Beranda", icon: "home" },
-      { href: "/collections", label: "Produk", icon: "star" },
+    ];
+    // Build dynamic items from navigation config
+    const dynamicItems = navMain.map((item) => ({
+      href: item.href,
+      label: item.label,
+      icon: "star",
+      children: item.megaMenu?.flatMap(col => col.items) || []
+    }));
+    const extraItems = [
       { href: "/about", label: "Tentang Kami", icon: "info" },
       { href: "/contact", label: "Kontak", icon: "box" },
-    ],
-    [],
-  );
+    ];
+    return [...staticItems, ...dynamicItems, ...extraItems];
+  }, [settings.navigation]);
 
   return (
     <>

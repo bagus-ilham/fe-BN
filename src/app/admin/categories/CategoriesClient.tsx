@@ -43,11 +43,7 @@ export default function CategoriesClient({ initialCategories }: { initialCategor
   const handleOpenModal = (cat?: Category) => {
     if (cat) {
       setEditingCategory(cat);
-      setFormData({
-        id: cat.id,
-        name: cat.name,
-        description: cat.description || ""
-      });
+      setFormData({ id: cat.id, name: cat.name, description: cat.description || "" });
     } else {
       setEditingCategory(null);
       setFormData({ id: "", name: "", description: "" });
@@ -76,7 +72,6 @@ export default function CategoriesClient({ initialCategories }: { initialCategor
 
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus kategori ini? Produk yang terkait mungkin akan bermasalah.")) return;
-    
     try {
       await deleteCategoryViaAdminApi(id);
       setCategories(categories.filter(c => c.id !== id));
@@ -89,65 +84,66 @@ export default function CategoriesClient({ initialCategories }: { initialCategor
   return (
     <>
       {/* Search & Action */}
-      <div className="surface-card p-4 flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
+      <div className="bg-white rounded-2xl border border-brand-softblack/[0.06] p-4 flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-softblack/25" size={16} />
           <input 
             type="text" 
             placeholder="Cari kategori..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-brand-offwhite/50 border-none text-sm focus:ring-1 focus:ring-brand-green/30 outline-none"
+            className="w-full pl-10 pr-4 py-2.5 bg-[#F4F2EF] rounded-xl border border-transparent text-sm placeholder:text-brand-softblack/30 focus:ring-1 focus:ring-brand-gold/40 outline-none transition-all"
           />
         </div>
         <button 
           onClick={() => handleOpenModal()}
-          className="bg-brand-softblack text-brand-offwhite px-6 py-3 text-xs uppercase tracking-widest hover:bg-brand-green transition-all duration-300 flex items-center gap-2"
+          className="group inline-flex items-center gap-2 bg-brand-softblack text-brand-offwhite px-5 py-2.5 rounded-xl text-[10px] uppercase tracking-widest hover:bg-brand-green transition-all duration-300 shadow-lg shadow-brand-softblack/20 self-start"
         >
-          <Plus size={16} />
+          <Plus size={15} className="group-hover:rotate-90 transition-transform duration-300" />
           Tambah Kategori
         </button>
       </div>
 
       {/* Table */}
-      <div className="surface-card overflow-hidden">
+      <div className="bg-white rounded-2xl border border-brand-softblack/[0.06] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-brand-offwhite/50 border-b border-gray-100">
-                <th className="px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">ID / Slug</th>
-                <th className="px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">Nama Kategori</th>
-                <th className="px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">Deskripsi</th>
-                <th className="px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40 text-right">Aksi</th>
+              <tr className="bg-[#F4F2EF] border-b border-brand-softblack/[0.06]">
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/40">ID / Slug</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/40">Nama Kategori</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/40">Deskripsi</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/40 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-brand-softblack/[0.04]">
               {filteredCategories.map((cat) => (
-                <tr key={cat.id} className="hover:bg-brand-offwhite/20 transition-colors group">
+                <tr key={cat.id} className="hover:bg-brand-offwhite/50 transition-colors group">
                   <td className="px-6 py-4">
-                    <span className="text-[10px] font-mono text-brand-softblack/60 bg-brand-offwhite px-2 py-1 uppercase tracking-tighter">
-                      {cat.id}
-                    </span>
+                    <div className="inline-flex items-center gap-1.5 bg-[#F4F2EF] px-3 py-1.5 rounded-lg">
+                      <Tag size={11} className="text-brand-softblack/30" />
+                      <span className="text-[10px] font-mono text-brand-softblack/60 uppercase tracking-wider">{cat.id}</span>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-brand-softblack">{cat.name}</div>
+                    <span className="text-sm font-medium text-brand-softblack">{cat.name}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-[11px] text-brand-softblack/50 line-clamp-1 max-w-xs">{cat.description || "-"}</div>
+                    <span className="text-[11px] text-brand-softblack/45 line-clamp-1 max-w-xs italic">{cat.description || "—"}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
                         onClick={() => handleOpenModal(cat)}
-                        className="p-2 text-brand-softblack/40 hover:text-brand-green hover:bg-brand-green/5 transition-all"
+                        className="p-2 text-brand-softblack/35 hover:text-brand-green hover:bg-brand-champagne/40 transition-all rounded-xl"
                       >
-                        <Edit size={16} />
+                        <Edit size={15} />
                       </button>
                       <button 
                         onClick={() => handleDelete(cat.id)}
-                        className="p-2 text-brand-softblack/40 hover:text-red-500 hover:bg-red-500/5 transition-all"
+                        className="p-2 text-brand-softblack/35 hover:text-red-500 hover:bg-red-50 transition-all rounded-xl"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </td>
@@ -155,8 +151,9 @@ export default function CategoriesClient({ initialCategories }: { initialCategor
               ))}
               {filteredCategories.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-brand-softblack/30 text-xs uppercase tracking-widest">
-                    Tidak ada kategori ditemukan
+                  <td colSpan={4} className="px-6 py-16 text-center">
+                    <Tag size={28} className="mx-auto mb-3 text-brand-softblack/15" />
+                    <p className="text-sm text-brand-softblack/35">Tidak ada kategori ditemukan</p>
                   </td>
                 </tr>
               )}
@@ -172,73 +169,74 @@ export default function CategoriesClient({ initialCategories }: { initialCategor
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsModalOpen(false)}
-              className="absolute inset-0 bg-brand-softblack/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-brand-softblack/60"
             />
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white shadow-2xl overflow-hidden"
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
             >
-              <div className="h-2 bg-brand-green w-full" />
-              <div className="p-8">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-light text-brand-softblack uppercase tracking-tight">
-                    {editingCategory ? "Edit Kategori" : "Kategori Baru"}
-                  </h3>
-                  <button onClick={() => setIsModalOpen(false)} className="text-brand-softblack/20 hover:text-brand-softblack transition-colors">
-                    <X size={20} />
+              {/* Gold top bar */}
+              <div className="h-[3px] bg-gradient-to-r from-brand-gold/60 via-brand-gold to-brand-gold/60 w-full" />
+              <div className="p-7">
+                <div className="flex items-center justify-between mb-7">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.3em] text-brand-softblack/35 mb-1">Kategori</p>
+                    <h3 className="text-lg font-light text-brand-softblack">
+                      {editingCategory ? "Edit Kategori" : "Kategori Baru"}
+                    </h3>
+                  </div>
+                  <button onClick={() => setIsModalOpen(false)} className="p-2 rounded-xl text-brand-softblack/25 hover:text-brand-softblack hover:bg-[#F4F2EF] transition-all">
+                    <X size={18} />
                   </button>
                 </div>
 
-                <form onSubmit={handleSave} className="space-y-6">
+                <form onSubmit={handleSave} className="space-y-5">
                   <div>
-                    <label className="text-[10px] uppercase tracking-[0.25em] block mb-2 text-brand-softblack/40 font-medium">ID / Slug (Unik)</label>
+                    <label className="text-[9px] uppercase tracking-[0.25em] block mb-2 text-brand-softblack/40 font-semibold">ID / Slug (Unik)</label>
                     <input 
-                      type="text" 
-                      required
+                      type="text" required
                       disabled={!!editingCategory}
                       value={formData.id}
                       onChange={(e) => setFormData({ ...formData, id: e.target.value.toLowerCase().replace(/ /g, '-') })}
                       placeholder="misal: baju-atasan"
-                      className="w-full bg-brand-offwhite border-none p-4 text-sm font-light focus:ring-1 focus:ring-brand-green outline-none disabled:opacity-50"
+                      className="w-full bg-[#F4F2EF] rounded-xl p-3.5 text-sm font-light focus:ring-1 focus:ring-brand-gold/40 outline-none disabled:opacity-50 transition-all border border-transparent focus:border-brand-gold/20"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase tracking-[0.25em] block mb-2 text-brand-softblack/40 font-medium">Nama Tampilan</label>
+                    <label className="text-[9px] uppercase tracking-[0.25em] block mb-2 text-brand-softblack/40 font-semibold">Nama Tampilan</label>
                     <input 
-                      type="text" 
-                      required
+                      type="text" required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="misal: Baju Atasan"
-                      className="w-full bg-brand-offwhite border-none p-4 text-sm font-light focus:ring-1 focus:ring-brand-green outline-none"
+                      className="w-full bg-[#F4F2EF] rounded-xl p-3.5 text-sm font-light focus:ring-1 focus:ring-brand-gold/40 outline-none transition-all border border-transparent focus:border-brand-gold/20"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase tracking-[0.25em] block mb-2 text-brand-softblack/40 font-medium">Deskripsi (Opsional)</label>
+                    <label className="text-[9px] uppercase tracking-[0.25em] block mb-2 text-brand-softblack/40 font-semibold">Deskripsi (Opsional)</label>
                     <textarea 
                       rows={3}
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full bg-brand-offwhite border-none p-4 text-sm font-light focus:ring-1 focus:ring-brand-green outline-none resize-none"
+                      className="w-full bg-[#F4F2EF] rounded-xl p-3.5 text-sm font-light focus:ring-1 focus:ring-brand-gold/40 outline-none resize-none transition-all border border-transparent focus:border-brand-gold/20"
                     />
                   </div>
 
-                  <div className="flex gap-4 pt-4">
+                  <div className="flex gap-3 pt-2">
                     <button 
-                      type="button"
-                      onClick={() => setIsModalOpen(false)}
-                      className="flex-1 px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-bold text-brand-softblack/40 hover:bg-brand-offwhite transition-all"
+                      type="button" onClick={() => setIsModalOpen(false)}
+                      className="flex-1 px-4 py-3 rounded-xl text-[10px] uppercase tracking-widest text-brand-softblack/40 hover:bg-[#F4F2EF] transition-all"
                     >
                       Batal
                     </button>
                     <button 
-                      type="submit"
-                      disabled={loading}
-                      className="flex-[2] bg-brand-softblack text-brand-offwhite px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-brand-green transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      type="submit" disabled={loading}
+                      className="flex-[2] bg-brand-softblack text-brand-offwhite px-4 py-3 rounded-xl text-[10px] uppercase tracking-widest hover:bg-brand-green transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-brand-softblack/20"
                     >
-                      {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                      {loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                       {loading ? "Menyimpan..." : "Simpan Kategori"}
                     </button>
                   </div>

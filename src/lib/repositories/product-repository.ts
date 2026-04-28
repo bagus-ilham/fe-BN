@@ -8,7 +8,7 @@ export const productRepository = {
         id, name, tagline, description, short_description, base_price,
         category_id, collection_id, image_url, badge, units_sold,
         rating, reviews_count, is_active, size_guide, care_instructions,
-        key_highlights, created_at, updated_at,
+        key_highlights, material, created_at, updated_at,
         product_variants (
           id, color_name, color_hex, size, price, old_price, image_url, inventory (*)
         ),
@@ -153,27 +153,50 @@ export const productRepository = {
       .select()
       .single();
   },
-  upsertProductAdmin(productId: string, productData: Record<string, unknown>) {
+  upsertProductAdmin(productId: string, productData: any) {
+    const payload = {
+      id: productId,
+      name: productData.name,
+      tagline: productData.tagline || null,
+      description: productData.description || null,
+      short_description: productData.short_description || null,
+      base_price: productData.base_price || 0,
+      category_id: productData.category_id || null,
+      collection_id: productData.collection_id || null,
+      image_url: productData.image_url || null,
+      badge: productData.badge || null,
+      is_active: productData.is_active ?? true,
+      material: productData.material || null,
+      size_guide: productData.size_guide || null,
+      care_instructions: productData.care_instructions || null,
+      key_highlights: productData.key_highlights || [],
+      updated_at: new Date().toISOString(),
+    };
+
     return getSupabaseAdmin()
       .from("products")
-      .upsert({
-        id: productId,
-        ...productData,
-        updated_at: new Date().toISOString(),
-      })
+      .upsert(payload)
       .select()
       .single();
   },
-  upsertProductVariantAdmin(productId: string, variant: Record<string, unknown>) {
-    const { id: variantId, ...variantData } = variant;
+  upsertProductVariantAdmin(productId: string, variant: any) {
+    const payload = {
+      ...(variant.id ? { id: variant.id } : {}),
+      product_id: productId,
+      color_hex: variant.color || variant.color_hex || null,
+      color_name: variant.name || variant.color_name || null,
+      size: variant.size || null,
+      price: variant.price || 0,
+      old_price: variant.old_price || null,
+      image_url: variant.image_url || null,
+      sku: variant.sku || null,
+      is_active: variant.is_active ?? true,
+      updated_at: new Date().toISOString(),
+    };
+    
     return getSupabaseAdmin()
       .from("product_variants")
-      .upsert({
-        ...(variantId ? { id: variantId } : {}),
-        product_id: productId,
-        ...variantData,
-        updated_at: new Date().toISOString(),
-      });
+      .upsert(payload);
   },
   deleteProductImagesByProductId(productId: string) {
     return getSupabaseAdmin().from("product_images").delete().eq("product_id", productId);

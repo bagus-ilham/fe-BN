@@ -144,16 +144,14 @@ export default function ProductPageContent({ product, initialRecommendations = [
             <p className="text-brand-softblack/70 text-sm leading-relaxed">
               Koleksi {siteSettings.storeName} dirancang dengan mengutamakan kenyamanan tanpa mengorbankan estetika. Menggunakan material berkualitas tinggi yang sejuk dan jatuh dengan indah di tubuh.
             </p>
-            <ul className="space-y-2 list-none text-sm">
-              <li className="flex gap-2">
-                <span className="text-brand-green">•</span>
-                <span className="text-brand-softblack/80 font-medium">Material: Premium Cotton / Silk Blend</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="text-brand-green">•</span>
-                <span className="text-brand-softblack/80 font-medium">Tekstur: Lembut, Ringan, & Tidak Menerawang</span>
-              </li>
-            </ul>
+            {(product as any).material && (
+              <ul className="space-y-2 list-none text-sm">
+                <li className="flex gap-2">
+                  <span className="text-brand-green">•</span>
+                  <span className="text-brand-softblack/80 font-medium">Material: {(product as any).material}</span>
+                </li>
+              </ul>
+            )}
             <div className="mt-4">
               <ProductDetailsTable productId={productId} highlights={keyHighlights} />
             </div>

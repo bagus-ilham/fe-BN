@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Layout, 
   Image as ImageIcon, 
@@ -11,33 +11,75 @@ import {
   Save, 
   Loader2,
   ExternalLink,
-  Smartphone,
-  Monitor
+  Monitor,
+  Layers,
+  RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
+import { saveSiteSettings } from "@/lib/cms-service";
 import Image from "next/image";
+
+type CollectionRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  banner_url: string | null;
+  is_active: boolean;
+};
 
 export default function HomepageManagerPage() {
   const { settings: globalSettings, updateSettings } = useSiteSettings();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [view, setView] = useState<"hero" | "banners">("hero");
+  const [view, setView] = useState<"hero" | "banners" | "collections">("hero");
 
   const [heroSlides, setHeroSlides] = useState(globalSettings.heroSlides);
   const [banners, setBanners] = useState(globalSettings.homepageBanners);
 
-  const handleSave = () => {
+  // Collections from DB
+  const [collections, setCollections] = useState<CollectionRow[]>([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
+
+  useEffect(() => {
+    if (view === "collections") {
+      fetchCollections();
+    }
+  }, [view]);
+
+  const fetchCollections = async () => {
+    setCollectionsLoading(true);
+    try {
+      const { listCollections } = await import("@/lib/application/products/product-admin-service");
+      const data = await listCollections();
+      setCollections(data as CollectionRow[]);
+    } catch (err) {
+      console.error("Gagal mengambil koleksi:", err);
+    } finally {
+      setCollectionsLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await saveSiteSettings({
+        hero_slides: heroSlides as any,
+        homepage_banners: banners as any,
+      });
       updateSettings({
         heroSlides,
         homepageBanners: banners
       } as any);
-      setLoading(false);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    }, 1500);
+    } catch (err) {
+      console.error("Gagal menyimpan homepage layout:", err);
+      alert("Gagal menyimpan ke database. Coba lagi.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addSlide = () => {
@@ -80,7 +122,7 @@ export default function HomepageManagerPage() {
         
         <button 
           onClick={handleSave}
-          disabled={loading}
+          disabled={loading || view === "collections"}
           className="bg-brand-softblack text-brand-offwhite px-10 py-4 text-[10px] uppercase tracking-[0.3em] font-medium hover:bg-brand-green transition-all duration-500 flex items-center gap-3 disabled:opacity-50 shadow-xl"
         >
           {loading ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
@@ -102,15 +144,21 @@ export default function HomepageManagerPage() {
       <div className="flex gap-1 mb-10 bg-brand-offwhite p-1 rounded-sm w-fit border border-stone-100">
         <button 
           onClick={() => setView("hero")}
-          className={`px-8 py-3 text-[10px] uppercase tracking-widest font-bold transition-all ${view === "hero" ? "bg-white text-brand-softblack shadow-sm" : "text-brand-softblack/40 hover:text-brand-softblack"}`}
+          className={`px-8 py-3 text-[10px] uppercase tracking-widest font-bold transition-all flex items-center gap-2 ${view === "hero" ? "bg-white text-brand-softblack shadow-sm" : "text-brand-softblack/40 hover:text-brand-softblack"}`}
         >
-          Hero Sliders
+          <ImageIcon size={12} /> Hero Sliders
         </button>
         <button 
           onClick={() => setView("banners")}
-          className={`px-8 py-3 text-[10px] uppercase tracking-widest font-bold transition-all ${view === "banners" ? "bg-white text-brand-softblack shadow-sm" : "text-brand-softblack/40 hover:text-brand-softblack"}`}
+          className={`px-8 py-3 text-[10px] uppercase tracking-widest font-bold transition-all flex items-center gap-2 ${view === "banners" ? "bg-white text-brand-softblack shadow-sm" : "text-brand-softblack/40 hover:text-brand-softblack"}`}
         >
-          Collection Banners
+          <Layout size={12} /> Banners
+        </button>
+        <button 
+          onClick={() => setView("collections")}
+          className={`px-8 py-3 text-[10px] uppercase tracking-widest font-bold transition-all flex items-center gap-2 ${view === "collections" ? "bg-white text-brand-softblack shadow-sm" : "text-brand-softblack/40 hover:text-brand-softblack"}`}
+        >
+          <Layers size={12} /> Collections
         </button>
       </div>
 
@@ -249,7 +297,7 @@ export default function HomepageManagerPage() {
               ))}
             </div>
           </motion.div>
-        ) : (
+        ) : view === "banners" ? (
           <motion.div 
             key="banners-view"
             initial={{ opacity: 0, x: -10 }}
@@ -359,6 +407,83 @@ export default function HomepageManagerPage() {
                   </div>
                 ))}
              </div>
+          </motion.div>
+        ) : (
+          /* ─── COLLECTIONS TAB ─── */
+          <motion.div
+            key="collections-view"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            className="space-y-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-[11px] uppercase tracking-[0.25em] font-bold text-brand-softblack">Daftar Koleksi Aktif</h3>
+                <p className="text-[9px] uppercase tracking-widest text-brand-softblack/40 mt-1">Data langsung dari database — kelola di menu <strong>Koleksi</strong></p>
+              </div>
+              <button
+                onClick={fetchCollections}
+                disabled={collectionsLoading}
+                className="flex items-center gap-2 text-brand-softblack/50 text-[9px] uppercase tracking-widest font-bold hover:text-brand-green transition-colors"
+              >
+                <RefreshCw size={13} className={collectionsLoading ? "animate-spin" : ""} />
+                Refresh
+              </button>
+            </div>
+
+            {collectionsLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 size={24} className="animate-spin text-brand-softblack/30" />
+              </div>
+            ) : collections.length === 0 ? (
+              <div className="bg-white border border-dashed border-stone-200 rounded-sm p-16 text-center">
+                <Layers size={32} className="mx-auto mb-3 text-stone-300" />
+                <p className="text-sm font-light text-brand-softblack/40">Belum ada koleksi. Buat koleksi di menu <strong>Koleksi</strong>.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {collections.map((col) => (
+                  <div key={col.id} className="bg-white border border-stone-100 rounded-sm shadow-sm overflow-hidden group">
+                    <div className="aspect-video relative bg-brand-offwhite">
+                      {col.image_url ? (
+                        <Image src={col.image_url} alt={col.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-stone-200">
+                          <Layers size={32} />
+                        </div>
+                      )}
+                      <div className={`absolute top-2 right-2 px-2 py-0.5 text-[8px] uppercase tracking-widest font-bold rounded-full ${col.is_active ? "bg-emerald-50 text-emerald-600 border border-emerald-200" : "bg-red-50 text-red-400 border border-red-200"}`}>
+                        {col.is_active ? "Aktif" : "Nonaktif"}
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <p className="text-[9px] uppercase tracking-widest text-brand-softblack/30 mb-1">ID: {col.id}</p>
+                      <h4 className="text-sm font-medium text-brand-softblack">{col.name}</h4>
+                      {col.description && (
+                        <p className="text-[10px] text-brand-softblack/50 mt-1 line-clamp-2">{col.description}</p>
+                      )}
+                      <div className="mt-3 pt-3 border-t border-stone-50 flex gap-2">
+                        <a
+                          href={`/collections?collection=${encodeURIComponent(col.name)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-[8px] uppercase tracking-widest text-brand-green hover:opacity-70 transition-opacity"
+                        >
+                          <ExternalLink size={10} /> Lihat
+                        </a>
+                        <a
+                          href="/admin/collections"
+                          className="flex items-center gap-1 text-[8px] uppercase tracking-widest text-brand-softblack/40 hover:text-brand-softblack transition-colors ml-auto"
+                        >
+                          Edit →
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

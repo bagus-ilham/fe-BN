@@ -1,8 +1,8 @@
-import { supabase } from "@/utils/supabase";
+import { supabase, getSupabaseAdmin } from "@/utils/supabase";
 import { CmsPage, CmsPageVersion, SiteSettingsRow } from "@/types/database";
 
 export async function listCMSPagesForAdmin(): Promise<CmsPage[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseAdmin()
     .from("cms_pages")
     .select("*")
     .order("slug", { ascending: true });
@@ -16,7 +16,7 @@ export async function listCMSPagesForAdmin(): Promise<CmsPage[]> {
 }
 
 export async function getCMSPageBySlugForAdmin(slug: string): Promise<CmsPage | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseAdmin()
     .from("cms_pages")
     .select("*")
     .eq("slug", slug)
@@ -33,7 +33,7 @@ export async function getCMSPageBySlugForAdmin(slug: string): Promise<CmsPage | 
 }
 
 export async function listCMSPageVersionsForAdmin(pageId: string): Promise<CmsPageVersion[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseAdmin()
     .from("cms_page_versions")
     .select("*")
     .eq("page_id", pageId)
@@ -66,7 +66,7 @@ export async function getPublishedCMSPageBySlug(slug: string): Promise<CmsPage |
 }
 
 export async function saveCMSPage(page: Partial<CmsPage>) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseAdmin()
     .from("cms_pages")
     .upsert({
       ...page,
@@ -100,7 +100,7 @@ export async function getSiteSettings() {
 }
 
 export async function saveSiteSettings(settings: Partial<SiteSettingsRow>) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseAdmin()
     .from("site_settings")
     .upsert({ id: "current", ...settings, updated_at: new Date().toISOString() })
     .select()

@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     deviceSizes: [414, 640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     qualities: [60, 75, 85],
-    minimumCacheTTL: 2592000, // 30 dias — imagens vêm do Supabase e não mudam com frequência
+    minimumCacheTTL: 2592000, // 30 hari — gambar dari Supabase jarang berubah
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
         hostname: '*.supabase.in',
         pathname: '/storage/v1/object/public/**',
       },
-      // Permitir localhost para desenvolvimento
+      // Izinkan localhost untuk pengembangan
       {
         protocol: 'http',
         hostname: 'localhost',
@@ -41,15 +41,15 @@ const nextConfig: NextConfig = {
         port: '3000',
         pathname: '/**',
       },
-      // Permitir imagens do próprio domínio (produção)
+      // Izinkan gambar dari domain produksi
       {
         protocol: 'https',
-        hostname: 'benangbaju.com.br',
+        hostname: 'benangbaju.com',
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'www.benangbaju.com.br',
+        hostname: 'www.benangbaju.com',
         pathname: '/**',
       },
       {
@@ -63,36 +63,36 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
-    // Permitir URLs que começam com / (relativas)
+    // Izinkan URL relatif yang diawali /
     unoptimized: false,
   },
   // ============================================================================
-  // OTIMIZAÇÕES DE PERFORMANCE
+  // OPTIMASI PERFORMA
   // ============================================================================
-  compress: true, // Gzip/Brotli compression
-  poweredByHeader: false, // Remover header X-Powered-By (segurança)
-  reactStrictMode: true, // Detectar problemas comuns
+  compress: true, // Kompresi Gzip/Brotli
+  poweredByHeader: false, // Hapus header X-Powered-By (keamanan)
+  reactStrictMode: true, // Deteksi masalah umum
   
   // ============================================================================
-  // OTIMIZAÇÕES DE BUILD
+  // OPTIMASI BUILD
   // ============================================================================
-  // swcMinify removido - SWC é o minificador padrão no Next.js 16+
+  // swcMinify dihapus — SWC sudah menjadi minifier default di Next.js 16+
   ...(process.env.NODE_ENV === "production" && {
     compiler: { 
-      removeConsole: { exclude: ["error", "warn"] }, // Remove console.log em produção
+      removeConsole: { exclude: ["error", "warn"] }, // Hapus console.log di production
     },
   }),
 
   // ============================================================================
-  // OTIMIZAÇÕES EXPERIMENTAIS
+  // OPTIMASI EKSPERIMENTAL
   // ============================================================================
   experimental: {
-    // Otimizar imports de pacotes grandes (tree-shaking melhorado)
+    // Optimalkan import paket besar (tree-shaking lebih agresif)
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
   
   // ============================================================================
-  // REDIRECTS
+  // REDIRECT
   // ============================================================================
   async redirects() {
     return [
@@ -110,14 +110,14 @@ const nextConfig: NextConfig = {
   },
   
   // ============================================================================
-  // HEADERS DE SEGURANÇA E PERFORMANCE
+  // HEADER KEAMANAN & PERFORMA
   // ============================================================================
   async headers() {
     return [
       {
         source: '/:path*',
         headers: [
-          // Segurança
+          // Keamanan
           {
             key: 'X-DNS-Prefetch-Control',
             value: 'on',
@@ -134,7 +134,7 @@ const nextConfig: NextConfig = {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
           },
-          // Performance
+          // Performa
           {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
@@ -142,7 +142,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Cache otimizado para assets estáticos
+        // Cache dioptimasi untuk aset statis
         source: '/images/:path*',
         headers: [
           {
@@ -152,7 +152,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Cache para fontes
+        // Cache untuk font
         source: '/fonts/:path*',
         headers: [
           {
@@ -165,10 +165,10 @@ const nextConfig: NextConfig = {
   },
   
   // ============================================================================
-  // CONFIGURAÇÃO TURBOPACK
+  // KONFIGURASI TURBOPACK
   // ============================================================================
-  // Configuração vazia do Turbopack para suprimir warning
-  // O Turbopack já vem com otimizações excelentes por padrão no Next.js 16
+  // Konfigurasi kosong Turbopack untuk menekan warning
+  // Turbopack sudah hadir dengan optimasi luar biasa secara default di Next.js 16
   turbopack: {},
 };
 

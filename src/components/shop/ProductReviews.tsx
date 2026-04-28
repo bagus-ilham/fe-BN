@@ -273,7 +273,7 @@ function ProductReviews({
     () =>
       dbReviews.map((r) => ({
         id: r.id,
-        text: r.text,
+        text: r.text ?? "",
         author: r.author_name,
         rating: r.rating,
         imageUrl: r.image_url ?? null,

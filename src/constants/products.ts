@@ -18,7 +18,7 @@ export interface Product {
   description: string;
   short_description?: string;
   category_id: string;
-  badge?: 'bestseller' | 'new' | 'vegan' | 'kit';
+  badge?: 'bestseller' | 'new' | 'kit' | 'sale';
   oldPrice?: number;
   rating?: number;
   reviews_count?: number;

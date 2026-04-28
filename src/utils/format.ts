@@ -3,8 +3,11 @@
  * @param price - Harga yang akan diformat
  * @returns String terformat seperti "Rp 299.900"
  */
-export function formatPrice(price: number): string {
-  return `Rp ${price.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+export function formatPrice(price: number | null | undefined): string {
+  if (price === null || price === undefined || isNaN(Number(price))) {
+    return "Rp 0";
+  }
+  return `Rp ${Number(price).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 /**

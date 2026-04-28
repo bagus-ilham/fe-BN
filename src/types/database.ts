@@ -56,13 +56,14 @@ export interface Database {
           category_id: string | null
           collection_id: string | null
           image_url: string | null
-          badge: 'bestseller' | 'novo' | 'vegano' | 'kit' | 'new' | null
+          badge: 'bestseller' | 'new' | 'kit' | 'sale' | null
           units_sold: number
           rating: number
           reviews_count: number
           is_active: boolean
           deleted_at: string | null
           key_highlights: Json
+          material: string | null
           size_guide: string | null
           care_instructions: string | null
           created_at: string
@@ -87,7 +88,6 @@ export interface Database {
       }
       inventory: {
         Row: {
-          id: string
           variant_id: string
           stock_quantity: number
           reserved_quantity: number
@@ -137,7 +137,7 @@ export interface Database {
           customer_name: string | null
           customer_phone: string | null
           customer_nik: string | null
-          status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled'
+          status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'returned'
           total_amount: number
           shipping_amount: number
           discount_amount: number
@@ -198,7 +198,7 @@ export interface Database {
           author_name: string
           author_email: string | null
           rating: number
-          text: string
+          text: string | null
           image_url: string | null
           status: 'pending' | 'approved' | 'rejected'
           created_at: string
@@ -446,6 +446,8 @@ export interface Database {
           contact_info: Json
           social_links: Json
           navigation: Json
+          product_detail_settings: Json
+          brand_stats: Json
           updated_at: string
         }
       }

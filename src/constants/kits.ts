@@ -42,16 +42,20 @@ export interface Kit {
   };
 }
 
+// ⚠️  DATA INI ADALAH LEGACY — akan digantikan oleh tabel `kits` di Supabase.
+// ID produk di bawah harus sesuai dengan ID aktual di database.
+// Saat ini hanya ada 2 produk di seed: 'overlock-top-v1' dan 'linen-wide-pants'.
+// Tambahkan produk baru di database sebelum menambah kit baru di sini.
 const kitsData = [
   {
     id: "kit_1",
     name: "Koleksi Lengkap benangbaju",
-    products: ["prod_1", "prod_2", "prod_3", "prod_4", "prod_5"],
+    products: ["overlock-top-v1", "linen-wide-pants"],
     description: "Semua keindahan koleksi benangbaju dalam satu paket hemat.",
     badge: "kit" as const,
     price: 1099000,
     oldPrice: 1375000,
-    image: "/images/products/batik-dress.png",
+    image: "https://gwnegdilmazoobpexlld.supabase.co/storage/v1/object/public/site-assets/hero-3.jpg",
     longDescription:
       "Paket lengkap yang menggabungkan seluruh koleksi benangbaju. Dari atasan elegan hingga bawahan serbaguna, semua yang Anda butuhkan untuk tampil percaya diri setiap hari.",
     content: {
@@ -107,12 +111,12 @@ const kitsData = [
   {
     id: "kit_2",
     name: "Set Kasual Harian",
-    products: ["prod_2", "prod_4", "prod_5"], // Atasan Linen + Blouse + Kulot
+    products: ["overlock-top-v1", "linen-wide-pants"],
     description: "Kombinasi sempurna untuk tampil santai tapi tetap stylish.",
     badge: "kit" as const,
     price: 629000,
     oldPrice: 787000,
-    image: "/images/products/linen-atasan.png",
+    image: "https://gwnegdilmazoobpexlld.supabase.co/storage/v1/object/public/site-assets/hero-1.jpg",
     longDescription:
       "Paket kasual harian yang memadukan kenyamanan dan gaya. Ideal untuk aktivitas sehari-hari yang membutuhkan tampilan rileks namun tetap rapi.",
     content: {
@@ -158,12 +162,12 @@ const kitsData = [
   {
     id: "kit_3",
     name: "Set Feminin Elegan",
-    products: ["prod_1", "prod_3", "prod_4"], // Dress Batik + Rok Plisket + Blouse
+    products: ["overlock-top-v1"],
     description: "Tampil anggun dan feminin untuk berbagai momen.",
     badge: "kit" as const,
     price: 859000,
     oldPrice: 1057000,
-    image: "/images/products/pleated-skirt.png",
+    image: "https://gwnegdilmazoobpexlld.supabase.co/storage/v1/object/public/site-assets/hero-2.jpg",
     longDescription:
       "Paket yang menonjolkan sisi feminin dan elegan Anda. Pilihan ideal untuk acara semi-formal, pertemuan keluarga, atau momen spesial.",
     content: {
@@ -209,7 +213,7 @@ const kitsData = [
   {
     id: "kit_4",
     name: "Set Profesional Modern",
-    products: ["prod_2", "prod_3", "prod_4"], // Atasan Linen + Rok Plisket + Blouse
+    products: ["overlock-top-v1", "linen-wide-pants"],
     description: "Tampil profesional dan percaya diri di lingkungan kerja.",
     badge: "kit" as const,
     price: 699000,
@@ -259,7 +263,7 @@ const kitsData = [
   {
     id: "kit_5",
     name: "Duo Atasan Favorit",
-    products: ["prod_2", "prod_4"], // Atasan Linen + Blouse Katun
+    products: ["overlock-top-v1"],
     description: "Dua atasan favorit untuk pilihan gaya yang mudah.",
     badge: "kit" as const,
     price: 419000,
@@ -304,7 +308,7 @@ const kitsData = [
   {
     id: "kit_6",
     name: "Set Bawahan Serbaguna",
-    products: ["prod_3", "prod_5"], // Rok Plisket + Kulot Linen
+    products: ["linen-wide-pants"],
     description: "Dua bawahan premium yang mudah dipadukan dengan berbagai atasan.",
     badge: "kit" as const,
     price: 419000,

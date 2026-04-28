@@ -77,8 +77,6 @@ export interface SendOrderConfirmationParams {
     price: number;
     product_image?: string | null;
   }>;
-  pixCopyPaste?: string | null;
-  pixInstructions?: string | null;
   orderUrl?: string;
   siteUrl?: string;
 }

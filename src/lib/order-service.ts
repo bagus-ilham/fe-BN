@@ -5,7 +5,7 @@ type ProfileRow = { id: string } & Record<string, unknown>;
 type OrderItemLite = { product_id: string; product_name: string; price: number; quantity: number };
 type OrderWithUser = { user_id?: string | null } & Record<string, unknown>;
 
-export type AdminOrderStatus = "pending" | "paid" | "shipped" | "delivered" | "cancelled";
+export type AdminOrderStatus = "pending" | "paid" | "shipped" | "delivered" | "cancelled" | "returned";
 export type ListOrdersAdminInput = {
   page: number;
   pageSize: number;

@@ -14,12 +14,12 @@ import { formatPrice } from "@/utils/format";
 import AdminPagination from "@/components/admin/AdminPagination";
 import { buildAdminHref } from "@/lib/admin/build-admin-href";
 
-const statusStyles: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-600 border-amber-100",
-  paid: "bg-brand-green/10 text-brand-green border-brand-green/20",
-  shipped: "bg-blue-50 text-blue-600 border-blue-100",
-  delivered: "bg-brand-softblack text-brand-offwhite border-brand-softblack",
-  cancelled: "bg-red-50 text-red-600 border-red-100",
+const statusConfig: Record<string, { label: string; classes: string; dot: string }> = {
+  pending:   { label: "Pending",   classes: "bg-amber-50 text-amber-600 border-amber-200/80",        dot: "bg-amber-400" },
+  paid:      { label: "Dibayar",   classes: "bg-emerald-50 text-emerald-600 border-emerald-200/80",  dot: "bg-emerald-400" },
+  shipped:   { label: "Dikirim",   classes: "bg-sky-50 text-sky-600 border-sky-200/80",              dot: "bg-sky-400" },
+  delivered: { label: "Selesai",   classes: "bg-brand-softblack/90 text-brand-offwhite border-brand-softblack/80", dot: "bg-brand-gold" },
+  cancelled: { label: "Dibatalkan", classes: "bg-red-50 text-red-500 border-red-200/80",             dot: "bg-red-400" },
 };
 
 type OrderRow = Order & {
@@ -75,177 +75,160 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
   
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="surface-card border border-gray-100/80 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-brand-softblack/35">
+      <div className="bg-white rounded-2xl border border-brand-softblack/[0.06] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-[9px] uppercase tracking-[0.3em] text-brand-softblack/30">
             Orders Control Room
           </p>
-          <h2 className="text-2xl font-light text-brand-softblack tracking-tight">
+          <h2 className="text-xl font-light text-brand-softblack tracking-tight">
             Monitoring Pesanan
           </h2>
-          <p className="text-xs text-brand-softblack/40 uppercase tracking-widest mt-1">
-            Pantau dan kelola urutan transaksi benangbaju
+          <p className="text-[11px] text-brand-softblack/40">
+            Pantau dan kelola seluruh transaksi benangbaju
           </p>
         </div>
         
-        <button type="button" className="bg-brand-offwhite text-brand-softblack px-6 py-3 text-[10px] uppercase tracking-[0.2em] font-medium border border-gray-100 hover:bg-brand-softblack hover:text-white transition-all duration-500 flex items-center gap-2 self-start">
+        <button 
+          type="button" 
+          className="group inline-flex items-center gap-2 bg-[#F4F2EF] text-brand-softblack px-5 py-3 rounded-xl text-[10px] uppercase tracking-widest hover:bg-brand-champagne transition-all border border-brand-softblack/[0.06] self-start"
+        >
           <Download size={14} />
           Ekspor CSV
         </button>
       </div>
 
       {/* Summary Cards Mini */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="surface-card border border-gray-100/80 p-6 flex items-center gap-4">
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-            <Clock size={20} />
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Menunggu Pembayaran</div>
-            <div className="text-xl font-medium text-brand-softblack">{pendingCount}</div>
-          </div>
-        </div>
-        <div className="surface-card border border-gray-100/80 p-6 flex items-center gap-4">
-          <div className="p-3 bg-brand-green/10 text-brand-green rounded-xl">
-            <CheckCircle2 size={20} />
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Telah Dibayar</div>
-            <div className="text-xl font-medium text-brand-softblack">{paidCount}</div>
-          </div>
-        </div>
-        <div className="surface-card border border-gray-100/80 p-6 flex items-center gap-4">
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-            <Truck size={20} />
-          </div>
-          <div>
-            <div className="text-[10px] uppercase tracking-widest text-brand-softblack/40">Sedang Dikirim</div>
-            <div className="text-xl font-medium text-brand-softblack">{shippedCount}</div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          { icon: Clock, label: "Menunggu Pembayaran", value: pendingCount, iconClass: "bg-amber-50 text-amber-500", valueClass: pendingCount > 0 ? "text-amber-600" : "text-brand-softblack" },
+          { icon: CheckCircle2, label: "Telah Dibayar", value: paidCount, iconClass: "bg-emerald-50 text-emerald-500", valueClass: "text-brand-softblack" },
+          { icon: Truck, label: "Sedang Dikirim", value: shippedCount, iconClass: "bg-sky-50 text-sky-500", valueClass: "text-brand-softblack" },
+        ].map((card) => {
+          const Icon = card.icon;
+          return (
+            <div key={card.label} className="bg-white rounded-2xl border border-brand-softblack/[0.06] p-5 flex items-center gap-4">
+              <div className={`p-3 rounded-xl flex-shrink-0 ${card.iconClass}`}>
+                <Icon size={18} strokeWidth={1.5} />
+              </div>
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.22em] text-brand-softblack/40 mb-1">{card.label}</div>
+                <div className={`text-2xl font-light ${card.valueClass}`}>{card.value}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Table Section */}
-      <div className="surface-card border border-gray-100/80 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-brand-offwhite/30">
-           <form action="/admin/orders" method="get" className="relative flex-1 max-w-md">
-             {status && <input type="hidden" name="status" value={status} />}
-             {pageSize !== 20 && <input type="hidden" name="pageSize" value={String(pageSize)} />}
-             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
-             <input
-               type="text"
-               name="q"
-               defaultValue={q}
-               placeholder="Cari ID pesanan atau email..."
-               className="w-full pl-10 pr-4 py-2 bg-white border border-gray-100 text-xs focus:ring-1 focus:ring-brand-green/30 outline-none"
-             />
-           </form>
-           <div className="flex items-center gap-2">
-             <Link
-              href={buildAdminHref(basePath, query, { page: 1, status: "pending" })}
-               className={`px-4 py-2 text-[10px] uppercase tracking-widest border transition-colors ${
-                 status === "pending"
-                   ? "bg-brand-softblack text-white border-brand-softblack"
-                   : "bg-white text-brand-softblack/60 border-gray-100 hover:text-brand-softblack"
-               }`}
-             >
-               Pending
-             </Link>
-             <Link
-              href={buildAdminHref(basePath, query, { page: 1, status: "paid" })}
-               className={`px-4 py-2 text-[10px] uppercase tracking-widest border transition-colors ${
-                 status === "paid"
-                   ? "bg-brand-softblack text-white border-brand-softblack"
-                   : "bg-white text-brand-softblack/60 border-gray-100 hover:text-brand-softblack"
-               }`}
-             >
-               Paid
-             </Link>
-             <Link
-              href={buildAdminHref(basePath, query, { page: 1, status: "shipped" })}
-               className={`px-4 py-2 text-[10px] uppercase tracking-widest border transition-colors ${
-                 status === "shipped"
-                   ? "bg-brand-softblack text-white border-brand-softblack"
-                   : "bg-white text-brand-softblack/60 border-gray-100 hover:text-brand-softblack"
-               }`}
-             >
-               Shipped
-             </Link>
-             <Link
+      <div className="bg-white rounded-2xl border border-brand-softblack/[0.06] overflow-hidden">
+        {/* Table toolbar */}
+        <div className="p-4 border-b border-brand-softblack/[0.05] flex flex-col md:flex-row items-stretch md:items-center gap-3 bg-[#F4F2EF]/40">
+          <form action="/admin/orders" method="get" className="relative flex-1 max-w-sm">
+            {status && <input type="hidden" name="status" value={status} />}
+            {pageSize !== 20 && <input type="hidden" name="pageSize" value={String(pageSize)} />}
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-softblack/25" size={15} />
+            <input
+              type="text"
+              name="q"
+              defaultValue={q}
+              placeholder="Cari ID pesanan atau email..."
+              className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-brand-softblack/[0.06] text-xs text-brand-softblack placeholder:text-brand-softblack/30 focus:ring-1 focus:ring-brand-gold/30 outline-none transition-all"
+            />
+          </form>
+          <div className="flex items-center gap-2 flex-wrap">
+            {(["pending", "paid", "shipped"] as AdminOrderStatus[]).map((s) => (
+              <Link
+                key={s}
+                href={buildAdminHref(basePath, query, { page: 1, status: s })}
+                className={`px-4 py-2 rounded-xl text-[9px] uppercase tracking-widest transition-all ${
+                  status === s
+                    ? "bg-brand-softblack text-white shadow-sm"
+                    : "bg-white text-brand-softblack/55 border border-brand-softblack/[0.07] hover:bg-brand-champagne/40"
+                }`}
+              >
+                {statusConfig[s]?.label || s}
+              </Link>
+            ))}
+            <Link
               href={buildAdminHref(basePath, query, { page: 1, status: undefined })}
-               className="flex items-center gap-2 px-4 py-2 text-[10px] uppercase tracking-widest text-brand-softblack/60 hover:text-brand-softblack transition-colors"
-             >
-               <Filter size={14} />
-               Reset
-             </Link>
-           </div>
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[9px] uppercase tracking-widest text-brand-softblack/40 hover:text-brand-softblack bg-white border border-brand-softblack/[0.07] hover:bg-brand-champagne/40 transition-all"
+            >
+              <Filter size={11} />
+              Reset
+            </Link>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">Order ID & Date</th>
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">Customer</th>
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">Items</th>
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">Total Amount</th>
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">Status</th>
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40 text-right">Details</th>
+              <tr className="border-b border-brand-softblack/[0.04]">
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/35">Order ID & Tanggal</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/35">Pelanggan</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/35">Item</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/35">Total</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/35">Status</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/35 text-right">Detail</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {(orders as unknown as OrderRow[])?.map((order) => (
-                <tr key={order.id} className="hover:bg-brand-offwhite/20 transition-all duration-300 group">
-                  <td className="px-6 py-5">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-semibold text-brand-softblack truncate max-w-[120px]">
-                        #{order.id.split('-')[0].toUpperCase()}
+            <tbody className="divide-y divide-brand-softblack/[0.035]">
+              {(orders as unknown as OrderRow[])?.map((order) => {
+                const cfg = statusConfig[order.status] || { label: order.status, classes: "bg-gray-50 text-gray-500 border-gray-200", dot: "bg-gray-400" };
+                return (
+                  <tr key={order.id} className="hover:bg-brand-offwhite/50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-bold text-brand-softblack tracking-wider">
+                          #{order.id.split("-")[0].toUpperCase()}
+                        </span>
+                        <span className="text-[9px] text-brand-softblack/35 mt-0.5">
+                          {new Date(order.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-[12px] font-medium text-brand-softblack">
+                          {order.profiles?.full_name || order.customer_name || "Pelanggan Tamu"}
+                        </span>
+                        <span className="text-[9px] text-brand-softblack/35 lowercase mt-0.5">
+                          {order.customer_email}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="w-8 h-8 rounded-xl bg-[#F4F2EF] flex items-center justify-center border border-brand-softblack/[0.05] group-hover:bg-brand-champagne/50 transition-colors">
+                        <ShoppingBag size={13} className="text-brand-softblack/40 group-hover:text-brand-green transition-colors" />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-semibold text-brand-softblack">{formatPrice(order.total_amount)}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[9px] uppercase tracking-widest font-semibold border rounded-full ${cfg.classes}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
+                        {cfg.label}
                       </span>
-                      <span className="text-[10px] text-brand-softblack/30 mt-1">
-                        {new Date(order.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-medium text-brand-softblack">
-                        {order.profiles?.full_name || order.customer_name || 'Pelanggan Tamu'}
-                      </span>
-                      <span className="text-[10px] text-brand-softblack/40 lowercase">
-                        {order.customer_email}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="w-8 h-8 rounded-full bg-brand-offwhite flex items-center justify-center border border-brand-softblack/5 group-hover:bg-brand-green/10 transition-colors">
-                      <ShoppingBag size={14} className="text-brand-softblack/40 group-hover:text-brand-green" />
-                    </div>
-                  </td>
-                  <td className="px-6 py-5 text-sm font-medium text-brand-softblack">
-                    {formatPrice(order.total_amount)}
-                  </td>
-                  <td className="px-6 py-5">
-                    <span className={`px-3 py-1 text-[9px] uppercase tracking-widest font-semibold border rounded-full ${statusStyles[order.status] || "bg-gray-50 text-gray-500 border-gray-100"}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-5 text-right">
-                    <Link 
-                      href={`/admin/orders/${order.id}`}
-                      className="p-2 text-brand-softblack/20 hover:text-brand-green hover:bg-brand-green/5 rounded-full transition-all inline-block"
-                    >
-                      <ChevronRight size={18} />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Link 
+                        href={`/admin/orders/${order.id}`}
+                        className="inline-flex items-center justify-center p-2 text-brand-softblack/25 hover:text-brand-green hover:bg-brand-champagne/40 rounded-xl transition-all"
+                      >
+                        <ChevronRight size={16} />
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
 
               {(!orders || orders.length === 0) && (
                 <tr>
                   <td colSpan={6} className="px-8 py-20 text-center">
-                    <p className="text-sm font-light text-brand-softblack/40 italic">
+                    <ShoppingBag size={32} className="mx-auto mb-3 text-brand-softblack/15" />
+                    <p className="text-sm font-light text-brand-softblack/40">
                       {q || status ? "Tidak ada hasil yang cocok dengan filter saat ini." : "Belum ada pesanan yang masuk."}
                     </p>
                   </td>
@@ -269,4 +252,3 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
     </div>
   );
 }
-

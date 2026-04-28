@@ -1,16 +1,87 @@
 -- ============================================================
--- BENANG BAJU — PRODUCTION SCHEMA (v6.6 UNBREAKABLE TITAN MASTER)
+-- BENANG BAJU — PRODUCTION SCHEMA (v6.7 — with DROP GUARD)
 -- ============================================================
--- Changelog v6.6:
+-- Changelog v6.7:
+--   [RESET] Added DROP TABLE IF EXISTS ... CASCADE block for clean reset.
+--   [ADD]   material column in products.
+--   [ADD]   reorder_point column in inventory.
+--   [ADD]   product_detail_settings & brand_stats columns in site_settings.
 --   [SAFETY] Stock Guard: Added non-negative CHECK constraints on inventory.
 --   [SAFETY] Order Guard: Added positive CHECK constraints on item quantities.
 --   [SAFETY] Loyalty Guard: Set handle_loyalty_logic to SECURITY DEFINER.
 --   [CHECK] Verified all 35 tables, 8 triggers, 12 indexes, 6 RPCs.
---   [STAMP] Final Production benchmark for Benang Baju.
 -- ============================================================
 -- ENABLE EXTENSIONS
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- ============================================================
+-- 0. DROP GUARD — bersihkan schema lama sebelum recreate
+--    Urutan: tabel paling dependen → paling independen
+--    CASCADE otomatis menghapus FK & policies terkait
+-- ============================================================
+-- 0a. Drop Triggers
+DROP TRIGGER IF EXISTS t_inventory_audit        ON public.inventory;
+DROP TRIGGER IF EXISTS t_loyalty_automation     ON public.loyalty_points;
+DROP TRIGGER IF EXISTS t_order_master_logic     ON public.orders;
+DROP TRIGGER IF EXISTS t_carts_ts               ON public.carts;
+DROP TRIGGER IF EXISTS t_settings_ts            ON public.site_settings;
+DROP TRIGGER IF EXISTS t_orders_ts              ON public.orders;
+DROP TRIGGER IF EXISTS t_products_ts            ON public.products;
+DROP TRIGGER IF EXISTS t_loyalty_points_ts      ON public.loyalty_points;
+DROP TRIGGER IF EXISTS t_variants_ts            ON public.product_variants;
+DROP TRIGGER IF EXISTS t_collections_ts         ON public.collections;
+DROP TRIGGER IF EXISTS t_categories_ts          ON public.categories;
+DROP TRIGGER IF EXISTS t_kits_ts                ON public.kits;
+DROP TRIGGER IF EXISTS t_order_returns_ts       ON public.order_returns;
+
+-- 0b. Drop Functions
+DROP FUNCTION IF EXISTS public.create_order_v2 CASCADE;
+DROP FUNCTION IF EXISTS public.reserve_inventory_v3 CASCADE;
+DROP FUNCTION IF EXISTS public.handle_order_automation CASCADE;
+DROP FUNCTION IF EXISTS public.handle_loyalty_logic CASCADE;
+DROP FUNCTION IF EXISTS public.log_inventory_movement CASCADE;
+DROP FUNCTION IF EXISTS public.update_timestamp CASCADE;
+DROP FUNCTION IF EXISTS public.cleanup_expired_reservations CASCADE;
+-- 0b2. Drop Views
+DROP VIEW IF EXISTS public.active_products_summary CASCADE;
+DROP VIEW IF EXISTS public.active_flash_sales CASCADE;
+
+-- 0c. Drop Tables (dependent → parent)
+DROP TABLE IF EXISTS public.cms_page_versions       CASCADE;
+DROP TABLE IF EXISTS public.kit_items               CASCADE;
+DROP TABLE IF EXISTS public.flash_sale_items        CASCADE;
+DROP TABLE IF EXISTS public.cart_items              CASCADE;
+DROP TABLE IF EXISTS public.inventory_movements     CASCADE;
+DROP TABLE IF EXISTS public.inventory_reservations  CASCADE;
+DROP TABLE IF EXISTS public.inventory               CASCADE;
+DROP TABLE IF EXISTS public.order_status_history    CASCADE;
+DROP TABLE IF EXISTS public.order_returns           CASCADE;
+DROP TABLE IF EXISTS public.order_items             CASCADE;
+DROP TABLE IF EXISTS public.payment_transactions    CASCADE;
+DROP TABLE IF EXISTS public.shipments               CASCADE;
+DROP TABLE IF EXISTS public.email_sequences         CASCADE;
+DROP TABLE IF EXISTS public.checkout_abandons       CASCADE;
+DROP TABLE IF EXISTS public.reviews                 CASCADE;
+DROP TABLE IF EXISTS public.waitlist                CASCADE;
+DROP TABLE IF EXISTS public.wishlists               CASCADE;
+DROP TABLE IF EXISTS public.user_addresses          CASCADE;
+DROP TABLE IF EXISTS public.product_images          CASCADE;
+DROP TABLE IF EXISTS public.product_variants        CASCADE;
+DROP TABLE IF EXISTS public.loyalty_history         CASCADE;
+DROP TABLE IF EXISTS public.loyalty_points          CASCADE;
+DROP TABLE IF EXISTS public.admin_logs              CASCADE;
+DROP TABLE IF EXISTS public.cms_pages               CASCADE;
+DROP TABLE IF EXISTS public.orders                  CASCADE;
+DROP TABLE IF EXISTS public.carts                   CASCADE;
+DROP TABLE IF EXISTS public.flash_sales             CASCADE;
+DROP TABLE IF EXISTS public.promo_codes             CASCADE;
+DROP TABLE IF EXISTS public.vip_list                CASCADE;
+DROP TABLE IF EXISTS public.kits                    CASCADE;
+DROP TABLE IF EXISTS public.products                CASCADE;
+DROP TABLE IF EXISTS public.categories              CASCADE;
+DROP TABLE IF EXISTS public.collections             CASCADE;
+DROP TABLE IF EXISTS public.profiles                CASCADE;
+DROP TABLE IF EXISTS public.site_settings           CASCADE;
 -- ============================================================
 -- 1. PROFILES & LOYALTY
 -- ============================================================
@@ -40,7 +111,7 @@ CREATE TABLE IF NOT EXISTS public.loyalty_history (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users ON DELETE CASCADE,
   points_change INTEGER NOT NULL,
-  reason TEXT NOT NULL,
+  reason TEXT NOT NULL CHECK (reason IN ('order_paid', 'order_cancelled', 'admin_adjustment', 'auto_change')),
   reference_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -82,7 +153,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   SET NULL,
     image_url TEXT,
     badge TEXT CHECK (
-      badge IN ('bestseller', 'novo', 'vegano', 'kit', 'new')
+      badge IN ('bestseller', 'new', 'kit', 'sale')
     ),
     units_sold INTEGER DEFAULT 0,
     rating DECIMAL(3, 2) DEFAULT 0,
@@ -90,6 +161,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     is_active BOOLEAN DEFAULT TRUE,
     deleted_at TIMESTAMPTZ,
     key_highlights JSONB DEFAULT '[]',
+    material TEXT,
     size_guide TEXT,
     care_instructions TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -168,6 +240,7 @@ CREATE TABLE IF NOT EXISTS public.inventory (
   stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
   reserved_quantity INTEGER NOT NULL DEFAULT 0 CHECK (reserved_quantity >= 0),
   low_stock_threshold INTEGER DEFAULT 5,
+  reorder_point INTEGER DEFAULT 0,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE TABLE IF NOT EXISTS public.inventory_movements (
@@ -443,6 +516,8 @@ CREATE TABLE IF NOT EXISTS public.site_settings (
   contact_info JSONB DEFAULT '{}',
   social_links JSONB DEFAULT '{}',
   navigation JSONB DEFAULT '{}',
+  product_detail_settings JSONB DEFAULT '{}',
+  brand_stats JSONB DEFAULT '{}',
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 -- ============================================================
@@ -670,7 +745,29 @@ CREATE OR REPLACE FUNCTION create_order_v2(
   ) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE v_item RECORD;
 v_res JSONB;
-BEGIN -- 1. Create Order
+v_discount DECIMAL := 0;
+v_promo RECORD;
+BEGIN
+-- 0. Validate & apply promo code
+IF p_coupon IS NOT NULL AND p_coupon <> '' THEN
+  SELECT * INTO v_promo FROM public.promo_codes
+  WHERE id = p_coupon AND is_active = TRUE
+    AND (expires_at IS NULL OR expires_at > NOW())
+    AND (usage_limit IS NULL OR usage_count < usage_limit);
+  IF FOUND THEN
+    IF v_promo.discount_type = 'percentage' THEN
+      v_discount := LEAST(
+        (p_total - p_shipping) * v_promo.discount_value / 100,
+        COALESCE(v_promo.max_discount_amount, 9999999)
+      );
+    ELSE
+      v_discount := v_promo.discount_value;
+    END IF;
+    -- Increment usage count
+    UPDATE public.promo_codes SET usage_count = usage_count + 1 WHERE id = p_coupon;
+  END IF;
+END IF;
+-- 1. Create Order
 INSERT INTO public.orders (
     id,
     user_id,
@@ -680,6 +777,7 @@ INSERT INTO public.orders (
     customer_nik,
     total_amount,
     shipping_amount,
+    discount_amount,
     coupon_code,
     shipping_zip,
     shipping_street,
@@ -696,7 +794,8 @@ VALUES (
     p_nik,
     p_total,
     p_shipping,
-    p_coupon,
+    v_discount,
+    NULLIF(p_coupon, ''),
     p_zip,
     p_street,
     p_city,
@@ -742,7 +841,7 @@ IF NOT (v_res->>'success')::BOOLEAN THEN RAISE EXCEPTION 'Stock insufficient for
 v_item.product_name;
 END IF;
 END LOOP;
-RETURN jsonb_build_object('success', true, 'order_id', p_order_id);
+RETURN jsonb_build_object('success', true, 'order_id', p_order_id, 'discount_applied', v_discount);
 EXCEPTION
 WHEN OTHERS THEN RETURN jsonb_build_object('success', false, 'error', SQLERRM);
 END;
@@ -750,19 +849,56 @@ $$;
 -- ============================================================
 -- 11. INDEXES & SECURITY
 -- ============================================================
+-- ============================================================
+-- 11. INDEXES & SECURITY
+-- ============================================================
+-- Core selection indexes
 CREATE INDEX IF NOT EXISTS idx_variant_selection ON public.product_variants(product_id, color_name, size);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_variant ON public.inventory(variant_id);
+-- Additional performance indexes
+CREATE INDEX IF NOT EXISTS idx_products_is_active ON public.products(is_active) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_products_collection ON public.products(collection_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_products_category ON public.products(category_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_payment_id ON public.orders(payment_order_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_product ON public.reviews(product_id, status);
+CREATE INDEX IF NOT EXISTS idx_waitlist_product ON public.waitlist(product_id);
+CREATE INDEX IF NOT EXISTS idx_email_seq_status ON public.email_sequences(status, send_at);
+CREATE INDEX IF NOT EXISTS idx_flash_sale_items_sale ON public.flash_sale_items(flash_sale_id);
+CREATE INDEX IF NOT EXISTS idx_wishlists_user ON public.wishlists(user_id);
+-- Missing updated_at triggers
+CREATE TRIGGER t_loyalty_points_ts BEFORE UPDATE ON loyalty_points FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+CREATE TRIGGER t_variants_ts BEFORE UPDATE ON product_variants FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+CREATE TRIGGER t_collections_ts BEFORE UPDATE ON collections FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+CREATE TRIGGER t_categories_ts BEFORE UPDATE ON categories FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+CREATE TRIGGER t_kits_ts BEFORE UPDATE ON kits FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+CREATE TRIGGER t_order_returns_ts BEFORE UPDATE ON order_returns FOR EACH ROW EXECUTE PROCEDURE update_timestamp();
+-- ============================================================
+-- 12. ROW LEVEL SECURITY
+-- ============================================================
+-- Profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR
-SELECT USING (true);
-CREATE POLICY "Users can update own profile" ON public.profiles FOR
-UPDATE USING (auth.uid() = id);
+CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+-- Orders
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users view own orders" ON public.orders FOR
-SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users insert own orders" ON public.orders FOR
-INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users view own orders" ON public.orders FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users insert own orders" ON public.orders FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- Order Status History
+ALTER TABLE public.order_status_history ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users view own order history" ON public.order_status_history FOR SELECT USING (
+  order_id IN (SELECT id FROM public.orders WHERE user_id = auth.uid())
+);
+-- Order Returns
+ALTER TABLE public.order_returns ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users view own returns" ON public.order_returns FOR SELECT USING (
+  order_id IN (SELECT id FROM public.orders WHERE user_id = auth.uid())
+);
+CREATE POLICY "Users insert own returns" ON public.order_returns FOR INSERT WITH CHECK (
+  order_id IN (SELECT id FROM public.orders WHERE user_id = auth.uid())
+);
+-- Cart Items
 ALTER TABLE public.cart_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users manage cart items" ON public.cart_items FOR ALL USING (
   cart_id IN (
@@ -771,9 +907,73 @@ CREATE POLICY "Users manage cart items" ON public.cart_items FOR ALL USING (
     WHERE user_id = auth.uid()
   )
 );
-REVOKE
-UPDATE ON public.loyalty_points
-FROM authenticated;
-REVOKE
-UPDATE ON public.loyalty_points
-FROM anon;
+-- Inventory Reservations — no user-facing access (admin only via service_role)
+ALTER TABLE public.inventory_reservations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role only for reservations" ON public.inventory_reservations FOR ALL USING (false);
+-- Wishlists
+ALTER TABLE public.wishlists ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users manage own wishlist" ON public.wishlists FOR ALL USING (auth.uid() = user_id);
+-- Reviews — approved ones are public, pending/rejected are user-specific
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Approved reviews are public" ON public.reviews FOR SELECT USING (status = 'approved');
+CREATE POLICY "Users view own pending reviews" ON public.reviews FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users insert reviews" ON public.reviews FOR INSERT WITH CHECK (true);
+-- User Addresses
+ALTER TABLE public.user_addresses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users manage own addresses" ON public.user_addresses FOR ALL USING (auth.uid() = user_id);
+-- Loyalty (block direct update from client)
+REVOKE UPDATE ON public.loyalty_points FROM authenticated;
+REVOKE UPDATE ON public.loyalty_points FROM anon;
+-- ============================================================
+-- 13. VIEWS
+-- ============================================================
+-- Active products with minimum variant price (avoids N+1 on listing pages)
+CREATE OR REPLACE VIEW public.active_products_summary AS
+SELECT
+  p.*,
+  MIN(v.price) AS min_price,
+  MIN(v.old_price) AS min_old_price,
+  COUNT(DISTINCT v.id) AS variant_count
+FROM public.products p
+JOIN public.product_variants v ON v.product_id = p.id AND v.is_active = TRUE
+WHERE p.is_active = TRUE AND p.deleted_at IS NULL
+GROUP BY p.id;
+-- active_flash_sales — used by TypeScript type FlashSale
+CREATE OR REPLACE VIEW public.active_flash_sales AS
+SELECT
+  fs.id AS session_id,
+  fs.name,
+  fsi.variant_id,
+  fsi.sale_price,
+  fsi.limit_qty,
+  fsi.sold_qty,
+  (fsi.limit_qty = 0 OR fsi.sold_qty < fsi.limit_qty) AS is_available,
+  fs.start_at,
+  fs.end_at
+FROM public.flash_sales fs
+JOIN public.flash_sale_items fsi ON fsi.flash_sale_id = fs.id
+WHERE fs.is_active = TRUE
+  AND fs.start_at <= NOW()
+  AND fs.end_at >= NOW();
+-- Cron: Cleanup expired reservations (called by /api/cron/cleanup-reservations)
+CREATE OR REPLACE FUNCTION public.cleanup_expired_reservations()
+RETURNS INTEGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_cleaned INTEGER := 0;
+BEGIN
+  -- Release reserved stock for expired reservations
+  UPDATE public.inventory i
+  SET reserved_quantity = GREATEST(0, i.reserved_quantity - ir.quantity)
+  FROM public.inventory_reservations ir
+  WHERE ir.status = 'active'
+    AND ir.expires_at < NOW()
+    AND i.variant_id = ir.variant_id;
+  -- Mark reservations as expired
+  UPDATE public.inventory_reservations
+  SET status = 'expired'
+  WHERE status = 'active'
+    AND expires_at < NOW();
+  GET DIAGNOSTICS v_cleaned = ROW_COUNT;
+  RETURN v_cleaned;
+END;
+$$;

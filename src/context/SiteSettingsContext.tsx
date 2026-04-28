@@ -251,7 +251,13 @@ export function SiteSettingsProvider({ children }: { children: React.ReactNode }
               dbSettings.social_links && typeof dbSettings.social_links === "object"
                 ? (dbSettings.social_links as SiteSettings["socialLinks"])
                 : prev.socialLinks,
-            productDetailSettings: prev.productDetailSettings,
+            productDetailSettings:
+              dbSettings.product_detail_settings &&
+              typeof dbSettings.product_detail_settings === "object" &&
+              !Array.isArray(dbSettings.product_detail_settings) &&
+              Object.keys(dbSettings.product_detail_settings).length > 0
+                ? (dbSettings.product_detail_settings as SiteSettings["productDetailSettings"])
+                : prev.productDetailSettings,
             navigation:
               dbSettings.navigation && typeof dbSettings.navigation === "object"
                 ? (dbSettings.navigation as SiteSettings["navigation"])

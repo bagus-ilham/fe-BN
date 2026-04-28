@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { API_ERROR_MESSAGES, cleanupReservationsSuccessMessage } from '@/constants/api-messages';
 
 /**
- * API Route para limpeza automática de reservas expiradas.
- * Deve ser chamada via CRON job (Vercel Cron ou similar).
- * Recomendado: Executar a cada 15 minutos.
+ * API Route untuk membersihkan reservasi inventaris yang kedaluwarsa secara otomatis.
+ * Dipanggil oleh CRON job (Vercel Cron atau serupa).
+ * Rekomendasi jadwal: setiap 15 menit.
  *
  * vercel.json: { "crons": [{ "path": "/api/cron/cleanup-reservations", "schedule": "0,15,30,45 * * * *" }] }
  */

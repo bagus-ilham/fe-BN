@@ -4,8 +4,8 @@ import { badRequest, internalError, ok } from "@/lib/http/api-response";
 import { API_ERROR_MESSAGES, ORDER_ERROR_MESSAGES, ORDER_MESSAGES } from "@/constants/api-messages";
 
 /**
- * API Route para verificar se um pedido foi criado usando order_id (Pagar.me), session_id ou payment_intent.
- * Usa service role para que o lookup funcione para guest: a página de sucesso não tem sessão com o email do pedido.
+ * API Route untuk memverifikasi apakah pesanan sudah dibuat berdasarkan order_id (Midtrans), session_id, atau payment_intent.
+ * Menggunakan service role agar lookup berfungsi untuk guest checkout (tidak ada sesi user).
  */
 
 export async function GET(req: NextRequest) {
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     }
     return ok(result);
   } catch (error: unknown) {
-    console.error("Erro na verificação de pedido:", error);
+    console.error("Gagal memverifikasi pesanan:", error);
     return internalError(API_ERROR_MESSAGES.INTERNAL_SERVER_ERROR);
   }
 }

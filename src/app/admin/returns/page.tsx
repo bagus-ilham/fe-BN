@@ -1,94 +1,110 @@
 import { listOrderReturnsForAdmin } from "@/lib/order-service";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RotateCcw, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { formatPrice } from "@/utils/format";
+
+const returnStatusConfig: Record<string, { classes: string; dot: string; label: string }> = {
+  requested:  { classes: "bg-amber-50 text-amber-600 border-amber-200/80",   dot: "bg-amber-400",   label: "Menunggu" },
+  approved:   { classes: "bg-emerald-50 text-emerald-600 border-emerald-200/80", dot: "bg-emerald-400", label: "Disetujui" },
+  completed:  { classes: "bg-sky-50 text-sky-600 border-sky-200/80",         dot: "bg-sky-400",     label: "Selesai" },
+  rejected:   { classes: "bg-red-50 text-red-500 border-red-200/80",          dot: "bg-red-400",     label: "Ditolak" },
+};
 
 export default async function AdminReturnsPage() {
   const returns = await listOrderReturnsForAdmin();
   
+  const pendingCount = returns?.filter((r: any) => r.status === "requested").length || 0;
+  const approvedCount = returns?.filter((r: any) => r.status === "approved").length || 0;
+  const completedCount = returns?.filter((r: any) => r.status === "completed").length || 0;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="surface-card border border-gray-100/80 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-brand-softblack/35">
-            Returns Desk
-          </p>
-          <h2 className="text-2xl font-light text-brand-softblack tracking-tight">
-            Retur Pesanan
-          </h2>
-          <p className="text-xs text-brand-softblack/40 uppercase tracking-widest mt-1">
-            Kelola permintaan pengembalian barang dan dana
-          </p>
+      <div className="bg-white rounded-2xl border border-brand-softblack/[0.06] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-[9px] uppercase tracking-[0.3em] text-brand-softblack/30">Returns Desk</p>
+          <h2 className="text-xl font-light text-brand-softblack tracking-tight">Retur Pesanan</h2>
+          <p className="text-[11px] text-brand-softblack/40">Kelola permintaan pengembalian barang dan dana</p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="surface-card border border-gray-100/80 px-6 pt-6">
-        <div className="flex gap-8 border-b border-gray-100 overflow-x-auto scrollbar-hide">
-        {['Semua', 'Menunggu Persetujuan', 'Disetujui', 'Selesai', 'Ditolak'].map((tab, i) => (
-          <button 
-            key={tab}
-            className={`pb-4 text-[10px] uppercase tracking-[0.2em] font-medium transition-all whitespace-nowrap ${
-              i === 0 ? 'text-brand-green border-b-2 border-brand-green' : 'text-brand-softblack/40 hover:text-brand-softblack'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-        </div>
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          { label: "Menunggu Persetujuan", value: pendingCount, icon: Clock, iconClass: "bg-amber-50 text-amber-500", urgent: pendingCount > 0 },
+          { label: "Disetujui", value: approvedCount, icon: CheckCircle2, iconClass: "bg-emerald-50 text-emerald-500" },
+          { label: "Selesai Diproses", value: completedCount, icon: XCircle, iconClass: "bg-sky-50 text-sky-500" },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div key={stat.label} className={`bg-white rounded-2xl border p-5 flex items-center gap-4 ${stat.urgent ? "border-amber-200/60" : "border-brand-softblack/[0.06]"}`}>
+              <div className={`p-3 rounded-xl flex-shrink-0 ${stat.iconClass}`}>
+                <Icon size={17} strokeWidth={1.5} />
+              </div>
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.2em] text-brand-softblack/40 mb-1">{stat.label}</div>
+                <div className="text-2xl font-light text-brand-softblack">{stat.value}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Table */}
-      <div className="surface-card border border-gray-100/80 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-brand-softblack/[0.06] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="border-b border-gray-100 bg-brand-offwhite/30">
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">ID Retur / Order</th>
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">Pelanggan</th>
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">Alasan</th>
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">Dana Retur</th>
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40">Status</th>
-                <th className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] font-medium text-brand-softblack/40 text-right">Aksi</th>
+              <tr className="bg-[#F4F2EF] border-b border-brand-softblack/[0.06]">
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/40">ID Retur</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/40">Pelanggan</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/40">Alasan</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/40">Dana Retur</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/40">Status</th>
+                <th className="px-6 py-4 text-[9px] uppercase tracking-[0.25em] font-semibold text-brand-softblack/40 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 text-sm">
-              {returns?.map((ret: any) => (
-                <tr key={ret.id} className="hover:bg-brand-offwhite/10 transition-colors">
-                  <td className="px-6 py-5">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-brand-softblack">{ret.id.slice(0, 8)}...</span>
-                      <span className="text-[10px] text-brand-softblack/40 uppercase tracking-widest">{ret.order_id}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-5 text-brand-softblack/60">{(ret as any).orders?.customer_name}</td>
-                  <td className="px-6 py-5">
-                    <div className="flex items-center gap-2 text-brand-softblack/60">
-                      <AlertCircle size={14} className="text-amber-500" />
-                      <span>{ret.reason}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-5 font-medium text-brand-softblack">
-                    {formatPrice(ret.refund_amount || 0)}
-                  </td>
-                  <td className="px-6 py-5">
-                    <span className={`px-2 py-0.5 text-[8px] uppercase tracking-[0.25em] font-bold border rounded-sm ${
-                      ret.status === 'requested' ? 'bg-amber-50 text-amber-500 border-amber-100' : 'bg-gray-50 text-gray-400'
-                    }`}>
-                      {ret.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-5 text-right">
-                    <button className="text-[10px] uppercase tracking-widest font-bold text-brand-green hover:underline transition-all">
-                      Review
-                    </button>
-                  </td>
-                </tr>
-              ))}
+            <tbody className="divide-y divide-brand-softblack/[0.04]">
+              {returns?.map((ret: any) => {
+                const cfg = returnStatusConfig[ret.status] || returnStatusConfig.requested;
+                return (
+                  <tr key={ret.id} className="hover:bg-brand-offwhite/50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-bold text-brand-softblack tracking-wider">#{ret.id.slice(0, 8).toUpperCase()}</span>
+                        <span className="text-[9px] text-brand-softblack/30 uppercase tracking-wider mt-0.5">Order: {ret.order_id.slice(0, 8)}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-[12px] font-medium text-brand-softblack">{(ret as any).orders?.customer_name || "—"}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-[11px] text-brand-softblack/60 max-w-xs">
+                        <AlertCircle size={13} className="text-amber-400 flex-shrink-0" />
+                        <span className="line-clamp-1">{ret.reason}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-semibold text-brand-softblack">{formatPrice(ret.refund_amount || 0)}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[9px] uppercase tracking-wider font-semibold border rounded-full ${cfg.classes}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
+                        {cfg.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="px-4 py-2 rounded-xl text-[9px] uppercase tracking-widest font-medium text-brand-softblack/40 hover:text-brand-green hover:bg-brand-champagne/40 transition-all opacity-0 group-hover:opacity-100">
+                        Review
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
               {(!returns || returns.length === 0) && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center italic text-brand-softblack/20">
-                    Tidak ada permintaan retur saat ini.
+                  <td colSpan={6} className="px-6 py-20 text-center">
+                    <RotateCcw size={32} className="mx-auto mb-3 text-brand-softblack/15" />
+                    <p className="text-sm font-light text-brand-softblack/40">Tidak ada permintaan retur saat ini.</p>
                   </td>
                 </tr>
               )}

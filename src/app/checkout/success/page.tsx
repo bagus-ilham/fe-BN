@@ -236,7 +236,6 @@ function SuccessContent() {
               menggunakan email yang sama untuk melacak pesanan ini.
             </div>
 
-          {/* Link bantuan concierge (opsional) */}
           <div className="pt-2">
             <a
               href="https://wa.me/6285001001234"

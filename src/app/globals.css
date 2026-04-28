@@ -557,3 +557,107 @@ h4, h5, h6 {
   background: linear-gradient(to left, transparent, rgba(201,164,126,0.25));
 }
 
+/* ============================================================================
+   ADMIN PANEL — Utility classes
+   ============================================================================ */
+
+/* Admin card surface */
+.admin-surface {
+  background: #ffffff;
+  border: 1px solid rgba(28, 28, 28, 0.06);
+  border-radius: 1rem; /* rounded-2xl */
+  box-shadow: 0 1px 8px rgba(28, 28, 28, 0.04);
+}
+
+/* Admin page background */
+.admin-bg {
+  background-color: #F4F2EF;
+}
+
+/* Admin table header cell */
+.admin-th {
+  padding: 1rem 1.5rem;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-weight: 600;
+  color: rgba(28, 28, 28, 0.4);
+  background: #F4F2EF;
+}
+
+/* Admin status badge */
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+/* Admin input base */
+.admin-input {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  background: #F4F2EF;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  color: #1C1C1C;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.admin-input:focus {
+  border-color: rgba(201, 164, 126, 0.4);
+  box-shadow: 0 0 0 3px rgba(201, 164, 126, 0.08);
+  background: #ffffff;
+}
+
+.admin-input::placeholder {
+  color: rgba(28, 28, 28, 0.3);
+}
+
+/* Admin button primary */
+.admin-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: #1C1C1C;
+  color: #FAF8F5;
+  border-radius: 0.75rem;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(28, 28, 28, 0.2);
+}
+
+.admin-btn-primary:hover {
+  background: #8B6F5E;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(139, 111, 94, 0.3);
+}
+
+/* Admin section header */
+.admin-section-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: rgba(28, 28, 28, 0.3);
+  font-weight: 500;
+}
+
+/* Admin divider */
+.admin-divider {
+  height: 1px;
+  background: rgba(28, 28, 28, 0.05);
+  margin: 0;
+}
+
