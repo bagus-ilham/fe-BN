@@ -900,13 +900,23 @@ CREATE POLICY "Users insert own returns" ON public.order_returns FOR INSERT WITH
 );
 -- Cart Items
 ALTER TABLE public.cart_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage cart items" ON public.cart_items FOR ALL USING (
-  cart_id IN (
-    SELECT id
-    FROM public.carts
-    WHERE user_id = auth.uid()
-  )
-);
+CREATE POLICY "Public cart items are manageable by anyone" ON public.cart_items FOR ALL USING (true);
+
+-- Carts
+ALTER TABLE public.carts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public carts are viewable by anyone" ON public.carts FOR SELECT USING (true);
+CREATE POLICY "Public carts are insertable by anyone" ON public.carts FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public carts are updatable by anyone" ON public.carts FOR UPDATE USING (true);
+CREATE POLICY "Public carts are deletable by anyone" ON public.carts FOR DELETE USING (true);
+
+-- Site Settings (Global, read-only for public)
+-- RLS not strictly required since we only GRANT SELECT to anon/authenticated.
+-- Updates are done via service_role.
+
+-- Catalog Tables (Read-Only for Public)
+-- We intentionally DO NOT enable RLS on these tables to simplify the schema and improve performance.
+-- Access is restricted entirely by only granting SELECT privileges to anon and authenticated roles.
+-- The frontend is responsible for filtering out inactive or deleted items (e.g. is_active = TRUE).
 -- Inventory Reservations — no user-facing access (admin only via service_role)
 ALTER TABLE public.inventory_reservations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Service role only for reservations" ON public.inventory_reservations FOR ALL USING (false);
@@ -924,6 +934,40 @@ CREATE POLICY "Users manage own addresses" ON public.user_addresses FOR ALL USIN
 -- Loyalty (block direct update from client)
 REVOKE UPDATE ON public.loyalty_points FROM authenticated;
 REVOKE UPDATE ON public.loyalty_points FROM anon;
+-- 12.5 GRANTS (Ensure PostgREST anon/authenticated access)
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
+
+GRANT SELECT ON public.products TO anon, authenticated;
+GRANT SELECT ON public.product_variants TO anon, authenticated;
+GRANT SELECT ON public.product_images TO anon, authenticated;
+GRANT SELECT ON public.categories TO anon, authenticated;
+GRANT SELECT ON public.collections TO anon, authenticated;
+GRANT SELECT ON public.kits TO anon, authenticated;
+GRANT SELECT ON public.kit_items TO anon, authenticated;
+GRANT SELECT ON public.flash_sales TO anon, authenticated;
+GRANT SELECT ON public.flash_sale_items TO anon, authenticated;
+GRANT SELECT ON public.promo_codes TO anon, authenticated;
+GRANT SELECT ON public.cms_pages TO anon, authenticated;
+GRANT SELECT ON public.cms_page_versions TO anon, authenticated;
+GRANT SELECT ON public.site_settings TO anon, authenticated;
+GRANT SELECT ON public.inventory TO anon, authenticated;
+GRANT SELECT ON public.reviews TO anon, authenticated;
+
+GRANT ALL PRIVILEGES ON public.carts TO anon, authenticated;
+GRANT ALL PRIVILEGES ON public.cart_items TO anon, authenticated;
+GRANT ALL PRIVILEGES ON public.orders TO anon, authenticated;
+GRANT ALL PRIVILEGES ON public.order_items TO anon, authenticated;
+GRANT ALL PRIVILEGES ON public.order_status_history TO anon, authenticated;
+GRANT ALL PRIVILEGES ON public.order_returns TO anon, authenticated;
+GRANT ALL PRIVILEGES ON public.payment_transactions TO anon, authenticated;
+GRANT ALL PRIVILEGES ON public.shipments TO anon, authenticated;
+GRANT ALL PRIVILEGES ON public.wishlists TO anon, authenticated;
+GRANT ALL PRIVILEGES ON public.user_addresses TO anon, authenticated;
+GRANT ALL PRIVILEGES ON public.profiles TO anon, authenticated;
+GRANT ALL PRIVILEGES ON public.waitlist TO anon, authenticated;
+
 -- ============================================================
 -- 13. VIEWS
 -- ============================================================

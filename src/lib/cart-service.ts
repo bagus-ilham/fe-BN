@@ -8,7 +8,7 @@ export async function getOrCreateCart(userId?: string, sessionId?: string) {
     : await cartRepository.getBySessionId(sessionId as string);
 
   if (error && error.code !== "PGRST116") {
-    console.error("Error fetching cart:", error);
+    console.error("Error fetching cart:", error.message || error);
     return null;
   }
 

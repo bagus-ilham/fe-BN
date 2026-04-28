@@ -92,7 +92,7 @@ export async function getSiteSettings() {
   
   if (error) {
     if (error.code !== "PGRST116") {
-      console.error("Error fetching site settings:", error);
+      console.error("Error fetching site settings:", error.message || error);
     }
     return null;
   }

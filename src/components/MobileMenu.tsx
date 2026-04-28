@@ -85,7 +85,16 @@ function MobileMenu() {
       { href: "/about", label: "Tentang Kami", icon: "info" },
       { href: "/contact", label: "Kontak", icon: "box" },
     ];
-    return [...staticItems, ...dynamicItems, ...extraItems];
+    const allItems = [...staticItems, ...dynamicItems, ...extraItems];
+    const uniqueItems = [];
+    const seenHrefs = new Set();
+    for (const item of allItems) {
+      if (!seenHrefs.has(item.href)) {
+        seenHrefs.add(item.href);
+        uniqueItems.push(item);
+      }
+    }
+    return uniqueItems;
   }, [settings.navigation]);
 
   return (
